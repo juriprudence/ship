@@ -14,6 +14,12 @@ export class Player {
         this.sprite = new Image();
         this.sprite.src = 'images/player.png';
 
+        this.sprite2 = new Image();
+        this.sprite2.src = 'images/player2.png';
+
+        this.animationTimer = 0;
+        this.animationFrame = 0; // 0 or 1
+
         // Sprite dimensions
         this.frameWidth = 204;
         this.frameHeight = 306;
@@ -40,8 +46,17 @@ export class Player {
             } else {
                 this.direction = dy > 0 ? 1 : 0; // Down : Up
             }
+
+            // Animation logic
+            this.animationTimer += dt;
+            if (this.animationTimer > 0.2) { // Toggle every 0.2s
+                this.animationFrame = (this.animationFrame + 1) % 2;
+                this.animationTimer = 0;
+            }
         } else {
             this.isMoving = false;
+            this.animationFrame = 0; // Reset to standing frame
+            this.animationTimer = 0;
         }
     }
 
@@ -80,12 +95,19 @@ export class Player {
         const scale = screenHeight / this.frameHeight;
         const screenWidth = this.frameWidth * scale;
 
-        if (this.sprite.complete) {
+        let yOffset = 25;
+        if (this.direction === 2 || this.direction === 3) {
+            yOffset = 40; // Push down further for side views
+        }
+
+        if (this.sprite.complete && this.sprite2.complete) {
+            const currentSprite = this.animationFrame === 0 ? this.sprite : this.sprite2;
+
             ctx.drawImage(
-                this.sprite,
+                currentSprite,
                 col * this.frameWidth, row * this.frameHeight,
                 this.frameWidth, this.frameHeight,
-                this.x - screenWidth / 2, this.y - screenHeight + 10, // Anchor at feet
+                this.x - screenWidth / 2, this.y - screenHeight + yOffset, // Anchor at feet
                 screenWidth, screenHeight
             );
         } else {

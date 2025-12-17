@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>راعي الصحراء</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #e6c288; /* Sand color fallback */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* Prevent zoom/scroll on mobile */
+        }
+
+        #gameCanvas {
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .top-bar {
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            pointer-events: auto;
+            backdrop-filter: blur(4px);
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            /* margin-right removed for better RTL layout */
+        }
+
+        .resource span {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .notifications {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .toast {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            animation: fadeOut 3s forwards;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(-10px); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+
+        #shop-menu {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(40, 30, 20, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #8b4513;
+            display: none; /* Hidden by default */
+            pointer-events: auto;
+            color: white;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        #shop-menu h2 { margin-top: 0; font-size: 1.2rem; color: #deb887; }
+        
+        .shop-btn {
+            background: #8b4513;
+            border: 1px solid #a0522d;
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .shop-btn:hover { background: #a0522d; }
+        .shop-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+
+        .tutorial {
+            position: absolute;
+            bottom: 10%;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            text-shadow: 1px 1px 2px black;
+            font-size: 16px;
+            pointer-events: none;
+            transition: opacity 1s;
+        }
+
+        /* Scanline effect for retro vibe */
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="top-bar">
+            <div style="display:flex; gap: 15px;">
+                <div class="resource">🪙 <span id="gold-display">0</span></div>
+                <div class="resource">🐑 <span id="sheep-display">20</span></div>
+                <div class="resource">🧶 <span id="wool-display">0</span></div>
+            </div>
+            <div style="font-size: 14px; color: #ddd;">اليوم <span id="day-display">1</span></div>
+        </div>
+        
+        <div class="notifications" id="notification-area"></div>
+        
+        <div class="tutorial" id="tutorial-text">
+            اضغط على الأرض للتحرك. قُد الخراف إلى الماء 💧 وإلى العشب 🌿. اجز صوفها عندما تصبح كثيفة ☁️.
+        </div>
+
+        <div id="shop-menu">
+            <h2>⛺ ترقيات المخيم</h2>
+            <button class="shop-btn" id="buy-sheep-btn" onclick="buySheep()">شراء خروف (50 🪙)</button>
+            <button class="shop-btn" id="upgrade-speed-btn" onclick="upgradeSpeed()">حذاء السرعة (100 🪙)</button>
+            <div style="margin-top:10px; font-size: 12px; color: #aaa;">ابتعد للإغلاق</div>
+        </div>
+    </div>
+    
+    <div class="scanlines"></div>
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+    /**
+     * Game Configuration & State
+     */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let gameState = {
+        gold: 0,
+        woolCount: 0,
+        day: 1,
+        time: 0, // 0 to 1 (0=morning, 0.5=noon, 1=night)
+        gameActive: true,
+        lastTime: 0
+    };
+
+    // Camera/Viewport
+    const camera = { x: 0, y: 0 };
+
+    // Game Objects
+    const player = {
+        x: 0, y: 0,
+        targetX: 0, targetY: 0,
+        speed: 150,
+        radius: 12,
+        isMoving: false,
+        actionRange: 60
+    };
+
+    const oasis = { x: 400, y: 300, radius: 100 };
+    const tent = { x: -300, y: -200, radius: 60, width: 120, height: 100 };
+    const grassland = { x: -450, y: 350, radius: 80 }; // مصدر الغذاء الجديد
+    
+    let sheepList = [];
+    const MAX_SHEEP = 50;
+
+    // Decor
+    let palms = [];
+    let cacti = [];
+
+    /**
+     * Initialization
+     */
+    function init() {
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Spawn initial entities
+        player.x = 0;
+        player.y = 0;
+        player.targetX = player.x;
+        player.targetY = player.y;
+
+        // Create initial sheep (20 as requested)
+        for(let i=0; i<20; i++) spawnSheep();
+
+        // Create scenery
+        for(let i=0; i<8; i++) {
+            palms.push({
+                x: oasis.x + (Math.random() * 180 - 90),
+                y: oasis.y + (Math.random() * 180 - 90) - 30, // Slight offset up
+                scale: 0.8 + Math.random() * 0.4
+            });
+        }
+        for(let i=0; i<15; i++) {
+            cacti.push({
+                x: (Math.random() * 2000 - 1000),
+                y: (Math.random() * 2000 - 1000),
+                type: Math.random() > 0.5 ? 1 : 2
+            });
+        }
+
+        // Inputs
+        canvas.addEventListener('pointerdown', handleInput);
+        
+        requestAnimationFrame(gameLoop);
+    }
+
+    function spawnSheep() {
+        if(sheepList.length >= MAX_SHEEP) return;
+        sheepList.push({
+            x: player.x + Math.random() * 100 - 50,
+            y: player.y + Math.random() * 100 - 50,
+            color: '#fff',
+            woolGrowth: 0, // 0 to 100
+            thirst: 0, // 0 to 120 (100 is dehydrated, 100+ is fatal)
+            hunger: 0, // 0 to 120 (100 is starving, 100+ is fatal)
+            state: 'idle', // idle, following, drinking, eating
+            id: Math.random()
+        });
+        updateUI();
+    }
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    /**
+     * Input Handling
+     */
+    function handleInput(e) {
+        const rect = canvas.getBoundingClientRect();
+        // Convert screen click to world coordinates
+        const clickX = e.clientX - rect.left + camera.x;
+        const clickY = e.clientY - rect.top + camera.y;
+
+        // Check if clicked a sheep (Shearing)
+        let clickedSheep = false;
+        for (let s of sheepList) {
+            const dx = s.x - clickX;
+            const dy = s.y - clickY;
+            if (dx*dx + dy*dy < 900) { // 30px radius click detection
+                if (s.woolGrowth >= 100) {
+                    shearSheep(s);
+                    clickedSheep = true;
+                    // Visual feedback
+                    createParticle(s.x, s.y, '#fff', 10);
+                } else {
+                    // Just nudge them
+                    s.x += (Math.random()-0.5)*20;
+                    s.y += (Math.random()-0.5)*20;
+                }
+            }
+        }
+
+        if (!clickedSheep) {
+            // Move player
+            player.targetX = clickX;
+            player.targetY = clickY;
+            player.isMoving = true;
+            
+            // Interaction visual
+            createRipple(clickX, clickY);
+        }
+    }
+
+    function shearSheep(sheep) {
+        sheep.woolGrowth = 0;
+        gameState.woolCount++;
+        gameState.gold += 10;
+        showNotification("+10 ذهب 🪙");
+        updateUI();
+    }
+
+    function buySheep() {
+        if (gameState.gold >= 50) {
+            gameState.gold -= 50;
+            spawnSheep();
+            showNotification("تم شراء خروف جديد! 🐑");
+        }
+        updateUI();
+    }
+
+    function upgradeSpeed() {
+        if (gameState.gold >= 100) {
+            gameState.gold -= 100;
+            player.speed *= 1.2;
+            showNotification("تمت ترقية السرعة! ⚡");
+            document.getElementById('upgrade-speed-btn').disabled = true;
+            document.getElementById('upgrade-speed-btn').textContent = "السرعة القصوى";
+        }
+        updateUI();
+    }
+
+    /**
+     * Game Logic
+     */
+    function update(dt) {
+        // Day Cycle
+        gameState.time += dt * 0.02; // Time passes
+        if(gameState.time > 10) {
+            gameState.time = 0;
+            gameState.day++;
+            updateUI();
+        }
+
+        // --- Player Movement ---
+        const dx = player.targetX - player.x;
+        const dy = player.targetY - player.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+
+        if (dist > 5) {
+            const moveX = (dx / dist) * player.speed * dt;
+            const moveY = (dy / dist) * player.speed * dt;
+            player.x += moveX;
+            player.y += moveY;
+        } else {
+            player.isMoving = false;
+        }
+
+        // --- Camera Follow ---
+        // Smooth lerp to player
+        const targetCamX = player.x - canvas.width / 2;
+        const targetCamY = player.y - canvas.height / 2;
+        camera.x += (targetCamX - camera.x) * 5 * dt;
+        camera.y += (targetCamY - camera.y) * 5 * dt;
+
+        // --- Shop Interaction ---
+        const distToTent = Math.hypot(player.x - tent.x, player.y - tent.y);
+        const shopMenu = document.getElementById('shop-menu');
+        if (distToTent < 100) {
+            shopMenu.style.display = 'block';
+            document.getElementById('buy-sheep-btn').disabled = gameState.gold < 50;
+            if(document.getElementById('upgrade-speed-btn').innerText !== "السرعة القصوى") {
+                document.getElementById('upgrade-speed-btn').disabled = gameState.gold < 100;
+            }
+        } else {
+            shopMenu.style.display = 'none';
+        }
+
+        // --- Sheep Logic ---
+        // Create a new list for the next frame, excluding any sheep that die this frame.
+        const survivingSheep = []; 
+
+        sheepList.forEach(s => {
+            // 1. Wool Growth
+            if (s.woolGrowth < 100) s.woolGrowth += dt * 5;
+
+            // 2. Thirst & Hunger Increase (Max 120 for visual clarity before death at 100)
+            s.thirst += dt * 2.0;
+            s.hunger += dt * 1.5; 
+            if (s.thirst > 120) s.thirst = 120;
+            if (s.hunger > 120) s.hunger = 120;
+            
+            // --- Death Condition ---
+            if (s.thirst > 100 || s.hunger > 100) {
+                // Sheep dies
+                const cause = s.thirst > 100 ? "العطش" : "الجوع";
+                showNotification(`مات خروف من ${cause}! 💀`);
+                updateUI();
+                return; // Do not push to survivingSheep list
+            }
+
+            // --- Check Interactions ---
+            const distToOasis = Math.hypot(s.x - oasis.x, s.y - oasis.y);
+            const inOasis = distToOasis < oasis.radius;
+            
+            const distToGrass = Math.hypot(s.x - grassland.x, s.y - grassland.y);
+            const inGrassland = distToGrass < grassland.radius;
+
+            // Drinking at Oasis
+            if (inOasis) {
+                s.thirst -= dt * 30; // Drink fast
+                if (s.thirst < 0) s.thirst = 0;
+            }
+
+            // Eating at Grassland
+            if (inGrassland) {
+                s.hunger -= dt * 25; // Eat fast
+                if (s.hunger < 0) s.hunger = 0;
+            }
+
+
+            // 3. Movement Logic (Update Behavior State Machine)
+            let moveX = 0;
+            let moveY = 0;
+            let speed = 40;
+            const distToPlayer = Math.hypot(s.x - player.x, s.y - player.y);
+
+            if (s.thirst > 70 && !inOasis) {
+                // Go to water if very thirsty
+                const angle = Math.atan2(oasis.y - s.y, oasis.x - s.x);
+                moveX = Math.cos(angle);
+                moveY = Math.sin(angle);
+                speed = 60; // Run to water
+            } else if (s.hunger > 70 && !inGrassland) {
+                // Go to food if very hungry
+                const angle = Math.atan2(grassland.y - s.y, grassland.x - s.x);
+                moveX = Math.cos(angle);
+                moveY = Math.sin(angle);
+                speed = 60; // Run to food
+            } else if (distToPlayer < 150) {
+                // Herd/Follow player if close
+                const angle = Math.atan2(player.y - s.y, player.x - s.x);
+                // Don't get too close
+                if (distToPlayer > 50) {
+                    moveX = Math.cos(angle);
+                    moveY = Math.sin(angle);
+                    speed = player.isMoving ? player.speed * 0.9 : 20;
+                } else {
+                    // Idle wander near player
+                    if (Math.random() < 0.02) s.wanderAngle = Math.random() * Math.PI * 2;
+                    moveX = Math.cos(s.wanderAngle || 0) * 0.5;
+                    moveY = Math.sin(s.wanderAngle || 0) * 0.5;
+                }
+            } else {
+                // Idle wander alone
+                if (Math.random() < 0.01) s.wanderAngle = Math.random() * Math.PI * 2;
+                moveX = Math.cos(s.wanderAngle || 0) * 0.2;
+                moveY = Math.sin(s.wanderAngle || 0) * 0.2;
+            }
+
+            // Separation (don't stack)
+            sheepList.forEach(other => {
+                if (s === other) return;
+                const d = Math.hypot(s.x - other.x, s.y - other.y);
+                if (d < 20) {
+                    const pushAngle = Math.atan2(s.y - other.y, s.x - other.x);
+                    moveX += Math.cos(pushAngle) * 2;
+                    moveY += Math.sin(pushAngle) * 2;
+                }
+            });
+
+            s.x += moveX * speed * dt;
+            s.y += moveY * speed * dt;
+            
+            survivingSheep.push(s);
+        });
+        
+        sheepList = survivingSheep; // Update the list for the next frame
+
+        // Update particles
+        particles = particles.filter(p => p.life > 0);
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= dt;
+        });
+
+        ripples = ripples.filter(r => r.life > 0);
+        ripples.forEach(r => {
+            r.radius += dt * 30;
+            r.life -= dt;
+        });
+    }
+
+    /**
+     * Rendering
+     */
+    function draw() {
+        // Clear screen
+        ctx.fillStyle = '#e6c288'; // Sand
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        // Camera Transform
+        ctx.translate(-camera.x, -camera.y);
+
+        // Grid pattern for sand (texture)
+        ctx.strokeStyle = 'rgba(180, 140, 80, 0.2)';
+        ctx.lineWidth = 2;
+        const gridSize = 100;
+        const startX = Math.floor(camera.x / gridSize) * gridSize;
+        const startY = Math.floor(camera.y / gridSize) * gridSize;
+        
+        ctx.beginPath();
+        for (let x = startX; x < camera.x + canvas.width; x += gridSize) {
+            for (let y = startY; y < camera.y + canvas.height; y += gridSize) {
+                // Draw random little speckles/stones
+                if ((x+y)%300 === 0) {
+                     ctx.fillStyle = 'rgba(160, 120, 70, 0.3)';
+                     ctx.fillRect(x+20, y+20, 10, 5);
+                }
+            }
+        }
+        ctx.stroke();
+
+        // 1. Draw Oasis
+        ctx.fillStyle = '#4fa4b8'; // Water blue
+        ctx.beginPath();
+        ctx.arc(oasis.x, oasis.y, oasis.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#c2b280'; // Sand edge
+        ctx.lineWidth = 10;
+        ctx.stroke();
+
+        // 1.5 Draw Grassland (New Food Source)
+        ctx.fillStyle = '#6ab04c'; // Green
+        ctx.beginPath();
+        ctx.arc(grassland.x, grassland.y, grassland.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#346d29'; 
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        drawEmoji(grassland.x, grassland.y, '🌿', 50); // Bush emoji
+
+        // Palms
+        palms.forEach(p => {
+            drawEmoji(p.x, p.y, '🌴', 40 * p.scale);
+        });
+
+        // 2. Draw Tent
+        drawEmoji(tent.x, tent.y, '⛺', 80);
+        
+        // Cacti
+        cacti.forEach(c => {
+            drawEmoji(c.x, c.y, '🌵', 30);
+        });
+
+        // 3. Draw Sheep
+        sheepList.forEach(s => {
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.ellipse(s.x, s.y + 10, 12, 6, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            // Sheep body
+            const size = 24;
+            // Visual indicator for wool readiness
+            if (s.woolGrowth >= 100) {
+                // Fluffy/Ready to shear - Glow or outline
+                ctx.shadowColor = "white";
+                ctx.shadowBlur = 10;
+            } else {
+                ctx.shadowBlur = 0;
+            }
+            
+            drawEmoji(s.x, s.y, '🐑', size);
+            ctx.shadowBlur = 0; // Reset
+
+            // Thirst meter (mini bar, lower position)
+            if (s.thirst > 50) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(s.x - 10, s.y - 25, 20, 4);
+                ctx.fillStyle = s.thirst > 80 ? 'red' : '#4fa4b8';
+                const thirstW = (1 - (s.thirst/100)) * 20;
+                ctx.fillRect(s.x - 10, s.y - 25, Math.max(0, thirstW), 4);
+            }
+            
+            // Hunger meter (mini bar, higher position)
+            if (s.hunger > 50) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(s.x - 10, s.y - 32, 20, 4);
+                ctx.fillStyle = s.hunger > 80 ? 'red' : '#a0522d'; // Brown/Food color
+                const hungerW = (1 - (s.hunger/100)) * 20;
+                ctx.fillRect(s.x - 10, s.y - 32, Math.max(0, hungerW), 4);
+            }
+        });
+
+        // 4. Draw Player
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(player.x, player.y + 12, 10, 5, 0, 0, Math.PI*2);
+        ctx.fill();
+        
+        drawEmoji(player.x, player.y, '👳', 32);
+
+        // Target marker
+        if (player.isMoving) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(player.targetX, player.targetY, 5 + Math.sin(gameState.time*10)*2, 0, Math.PI*2);
+            ctx.stroke();
+        }
+
+        // VFX: Particles
+        particles.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        });
+
+        // VFX: Ripples
+        ctx.strokeStyle = 'white';
+        ripples.forEach(r => {
+            ctx.globalAlpha = r.life;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.radius, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        });
+
+        // Night Overlay
+        const dayProgress = gameState.time % 10;
+        let darkness = 0;
+        if (dayProgress > 7) { // Evening/Night starts
+             darkness = (dayProgress - 7) / 3 * 0.6; // Max 0.6 opacity
+        }
+        if (darkness > 0) {
+            ctx.fillStyle = `rgba(0, 10, 40, ${darkness})`;
+            // Keep Oasis glowing slightly by cutting it out? 
+            // Simplified: just draw rect over everything
+            ctx.fillRect(camera.x, camera.y, canvas.width, canvas.height);
+        }
+
+        ctx.restore();
+    }
+
+    function drawEmoji(x, y, emoji, size) {
+        ctx.font = `${size}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(emoji, x, y);
+    }
+
+    /**
+     * Utilities & UI
+     */
+    let particles = [];
+    function createParticle(x, y, color, count) {
+        for(let i=0; i<count; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random()-0.5)*100,
+                vy: (Math.random()-0.5)*100,
+                life: 1.0,
+                color: color
+            });
+        }
+    }
+
+    let ripples = [];
+    function createRipple(x, y) {
+        ripples.push({x, y, radius: 1, life: 0.5});
+    }
+
+    function showNotification(text) {
+        const notif = document.createElement('div');
+        notif.className = 'toast';
+        notif.textContent = text;
+        document.getElementById('notification-area').appendChild(notif);
+        setTimeout(() => notif.remove(), 3000);
+    }
+
+    function updateUI() {
+        document.getElementById('gold-display').textContent = Math.floor(gameState.gold);
+        document.getElementById('sheep-display').textContent = sheepList.length;
+        document.getElementById('wool-display').textContent = gameState.woolCount;
+        document.getElementById('day-display').textContent = gameState.day;
+    }
+
+    // Main Loop
+    function gameLoop(timestamp) {
+        if (!gameState.lastTime) gameState.lastTime = timestamp;
+        const dt = (timestamp - gameState.lastTime) / 1000;
+        gameState.lastTime = timestamp;
+
+        update(dt);
+        draw();
+        
+        if (gameState.gameActive) requestAnimationFrame(gameLoop);
+    }
+
+    // Start
+    init();
+
+</script>
+</body>
+</html>

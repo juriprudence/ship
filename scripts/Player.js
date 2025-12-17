@@ -10,6 +10,16 @@ export class Player {
         this.radius = 12;
         this.isMoving = false;
         this.actionRange = 60;
+
+        this.sprite = new Image();
+        this.sprite.src = 'images/player.png';
+
+        // Sprite dimensions
+        this.frameWidth = 204;
+        this.frameHeight = 306;
+
+        // 0: Back (Up), 1: Front (Down), 2: Left, 3: Right
+        this.direction = 1;
     }
 
     update(dt) {
@@ -23,6 +33,13 @@ export class Player {
             this.x += moveX;
             this.y += moveY;
             this.isMoving = true;
+
+            // Determine direction
+            if (Math.abs(dx) > Math.abs(dy)) {
+                this.direction = dx > 0 ? 3 : 2; // Right : Left
+            } else {
+                this.direction = dy > 0 ? 1 : 0; // Down : Up
+            }
         } else {
             this.isMoving = false;
         }
@@ -41,7 +58,40 @@ export class Player {
         ctx.ellipse(this.x, this.y + 12, 10, 5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        drawEmoji(ctx, this.x, this.y, '👳', 32);
+        // Sprite Drawing
+        // Grid mapping:
+        // Row 0: Back (0), Front (1)
+        // Row 1: Left (2), Right (3) -- ASSUMPTION based on typical sheets, may need tweak
+        // Actually looking at the image:
+        // Top-Left: Back, Top-Right: Front
+        // Bottom-Left: Left, Bottom-Right: Right
+
+        let col = 0;
+        let row = 0;
+
+        switch (this.direction) {
+            case 0: col = 0; row = 0; break; // Back
+            case 1: col = 1; row = 0; break; // Front
+            case 2: col = 1; row = 1; break; // Left (Swapped)
+            case 3: col = 0; row = 1; break; // Right (Swapped)
+        }
+
+        const screenHeight = 80;
+        const scale = screenHeight / this.frameHeight;
+        const screenWidth = this.frameWidth * scale;
+
+        if (this.sprite.complete) {
+            ctx.drawImage(
+                this.sprite,
+                col * this.frameWidth, row * this.frameHeight,
+                this.frameWidth, this.frameHeight,
+                this.x - screenWidth / 2, this.y - screenHeight + 10, // Anchor at feet
+                screenWidth, screenHeight
+            );
+        } else {
+            // Fallback while loading
+            drawEmoji(ctx, this.x, this.y, '👳', 32);
+        }
 
         // Target marker
         if (this.isMoving) {

@@ -28,6 +28,8 @@ export class Game {
         this.particles = [];
         this.ripples = [];
 
+        this.gameStarted = false;
+
         this.bindMethods();
     }
 
@@ -40,6 +42,7 @@ export class Game {
         this.restartGame = this.restartGame.bind(this);
         this.confirmPurchase = this.confirmPurchase.bind(this);
         this.cancelPurchase = this.cancelPurchase.bind(this);
+        this.startGame = this.startGame.bind(this);
     }
 
     init() {
@@ -52,6 +55,15 @@ export class Game {
         document.getElementById('upgrade-speed-btn').addEventListener('click', this.upgradeSpeed);
         document.getElementById('confirm-purchase').addEventListener('click', this.confirmPurchase);
         document.getElementById('cancel-purchase').addEventListener('click', this.cancelPurchase);
+        document.getElementById('start-game-btn').addEventListener('click', this.startGame);
+
+        // Don't start loop or spawn sheep yet
+        // requestAnimationFrame(this.gameLoop);
+    }
+
+    startGame() {
+        this.gameStarted = true;
+        document.getElementById('start-screen').style.display = 'none';
 
         // Initial Spawn
         for (let i = 0; i < 20; i++) this.spawnSheep();

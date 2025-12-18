@@ -49,11 +49,22 @@ export class Sheep {
         }
 
         // --- Interactions ---
+        // Find nearest grassland
+        let nearestGrass = null;
+        let minDistToGrass = Infinity;
+        world.grasslands.forEach(g => {
+            if (g.isExpired) return;
+            const d = Math.hypot(this.x - g.x, this.y - g.y);
+            if (d < minDistToGrass) {
+                minDistToGrass = d;
+                nearestGrass = g;
+            }
+        });
+
+        const inGrassland = nearestGrass ? nearestGrass.checkBounds(this.x, this.y) : false;
+
         const distToOasis = Math.hypot(this.x - world.oasis.x, this.y - world.oasis.y);
         const inOasis = distToOasis < world.oasis.radius;
-
-        const distToGrass = Math.hypot(this.x - world.grassland.x, this.y - world.grassland.y);
-        const inGrassland = distToGrass < world.grassland.radius;
 
         const distToTrought = trought ? Math.hypot(this.x - trought.x, this.y - trought.y) : Infinity;
         const inTrought = distToTrought < 50 && trought && trought.isTransformed;
@@ -63,9 +74,12 @@ export class Sheep {
             if (this.thirst < 0) this.thirst = 0;
         }
 
-        if (inGrassland) {
-            this.hunger -= dt * 25;
-            if (this.hunger < 0) this.hunger = 0;
+        if (inGrassland && nearestGrass) {
+            const consumed = nearestGrass.consume(dt * 8); // Slightly decreased rate as requested
+            if (consumed > 0) {
+                this.hunger -= dt * 25;
+                if (this.hunger < 0) this.hunger = 0;
+            }
         }
 
         if (inTrought) {
@@ -126,8 +140,8 @@ export class Sheep {
             moveX = Math.cos(angle);
             moveY = Math.sin(angle);
             speed = 60;
-        } else if (this.hunger > 70 && !inGrassland && distToGrass < perceptionRadius) {
-            const angle = Math.atan2(world.grassland.y - this.y, world.grassland.x - this.x);
+        } else if (this.hunger > 70 && nearestGrass && !inGrassland && minDistToGrass < perceptionRadius) {
+            const angle = Math.atan2(nearestGrass.y - this.y, nearestGrass.x - this.x);
             moveX = Math.cos(angle);
             moveY = Math.sin(angle);
             speed = 60;

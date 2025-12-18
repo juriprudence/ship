@@ -203,6 +203,11 @@ export class Game {
         this.player.update(dt);
         this.trought.update(dt);
 
+        const worldEvent = this.world.update(dt, this.player.x, this.player.y, this.gameState.day);
+        if (worldEvent.respawned) {
+            this.showNotification("نمت الأعشاب في مكان جديد! 🌿");
+        }
+
         if (this.trought.isExpired) {
             // Range increases by 1.0 for each day (e.g., Day 1: 1.0, Day 2: 2.0, Day 3: 3.0, etc.)
             const rangeMultiplier = 1 + (this.gameState.day - 1) * 1.0;

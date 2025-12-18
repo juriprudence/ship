@@ -1,10 +1,21 @@
 import { drawEmoji } from './Utils.js';
+import { Grassland } from './Grassland.js';
 
 export class World {
     constructor() {
         this.oasis = { x: 400, y: 300, radius: 100 };
         this.tent = { x: -300, y: -200, radius: 60, width: 120, height: 100 };
-        this.grassland = { x: -450, y: 350, radius: 80 };
+
+        // Multiple Grassland patches
+        this.grasslands = [];
+        for (let i = 0; i < 7; i++) {
+            // Initial distribution around the starting area
+            const angle = (i / 7) * Math.PI * 2;
+            const dist = 400 + Math.random() * 300;
+            const x = Math.cos(angle) * dist;
+            const y = Math.sin(angle) * dist;
+            this.grasslands.push(new Grassland(x, y));
+        }
 
         this.palms = [];
         this.cacti = [];
@@ -29,6 +40,16 @@ export class World {
                 type: Math.random() > 0.5 ? 1 : 2
             });
         }
+    }
+
+    update(dt, playerX, playerY, day) {
+        let anyRespawned = false;
+        this.grasslands.forEach(g => {
+            if (g.update(dt, playerX, playerY, day)) {
+                anyRespawned = true;
+            }
+        });
+        return { respawned: anyRespawned };
     }
 
     draw(ctx, camera, canvasWidth, canvasHeight) {
@@ -60,15 +81,8 @@ export class World {
         ctx.lineWidth = 10;
         ctx.stroke();
 
-        // Draw Grassland
-        ctx.fillStyle = '#6ab04c'; // Green
-        ctx.beginPath();
-        ctx.arc(this.grassland.x, this.grassland.y, this.grassland.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#346d29';
-        ctx.lineWidth = 5;
-        ctx.stroke();
-        drawEmoji(ctx, this.grassland.x, this.grassland.y, '🌿', 50);
+        // Draw Grasslands
+        this.grasslands.forEach(g => g.draw(ctx));
 
         // Palms
         this.palms.forEach(p => {

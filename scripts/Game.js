@@ -35,6 +35,7 @@ export class Game {
         this.handleInput = this.handleInput.bind(this);
         this.buySheep = this.buySheep.bind(this);
         this.upgradeSpeed = this.upgradeSpeed.bind(this);
+        this.restartGame = this.restartGame.bind(this); // Bind restart logic
     }
 
     init() {
@@ -120,6 +121,43 @@ export class Game {
         this.updateUI();
     }
 
+    restartGame() {
+        // Reset Game State
+        this.gameState = {
+            gold: 0,
+            woolCount: 0,
+            day: 1,
+            time: 0,
+            gameActive: true,
+            lastTime: 0
+        };
+
+        // Reset Lists
+        this.sheepList = [];
+        this.particles = [];
+        this.ripples = [];
+
+        // Reset Player Position (Optional, but good for clean restart)
+        this.player.x = 0;
+        this.player.y = 0;
+
+        // Hide Game Over Screen
+        document.getElementById('game-over').style.display = 'none';
+
+        // Spawn Initial Sheep
+        for (let i = 0; i < 20; i++) this.spawnSheep();
+
+        this.updateUI();
+
+        // Restart Loop if stopped
+        requestAnimationFrame(this.gameLoop);
+    }
+
+    triggerGameOver() {
+        this.gameState.gameActive = false;
+        document.getElementById('game-over').style.display = 'block';
+    }
+
     update(dt) {
         // Day Cycle
         this.gameState.time += dt * 0.02;
@@ -163,6 +201,11 @@ export class Game {
             }
         });
         this.sheepList = survivingSheep;
+
+        // Game Over Check
+        if (this.sheepList.length === 0 && this.gameState.gameActive) {
+            this.triggerGameOver();
+        }
 
         // Particles
         this.particles = this.particles.filter(p => p.life > 0);
@@ -248,6 +291,6 @@ export class Game {
 
 // Bootstrap
 window.onload = () => {
-    const game = new Game();
-    game.init();
+    window.game = new Game(); // Expose to window for button access
+    window.game.init();
 };

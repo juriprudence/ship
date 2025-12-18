@@ -193,6 +193,54 @@
         </div>
     </div>
 
+    <!-- Game Over Screen -->
+    <div id="game-over">
+        <h1>انتهت اللعبة!</h1>
+        <p>لقد نفذت جميع الخراف...</p>
+        <button onclick="window.game.restartGame()">إعادة المحاولة 🔄</button>
+    </div>
+
+    <style>
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid #8b4513;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        #game-over h1 {
+            color: #ff6b6b;
+            margin-top: 0;
+        }
+
+        #game-over button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+
+        #game-over button:hover {
+            transform: scale(1.05);
+            background: #45a049;
+        }
+    </style>
+
+
     <div class="scanlines"></div>
     <canvas id="gameCanvas"></canvas>
 

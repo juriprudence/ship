@@ -1,5 +1,16 @@
 import { drawEmoji } from './Utils.js';
 
+const sheepImages = {
+    down: new Image(),
+    up: new Image(),
+    left: new Image(),
+    right: new Image()
+};
+sheepImages.down.src = 'images/sheep/down.png';
+sheepImages.up.src = 'images/sheep/up.png';
+sheepImages.left.src = 'images/sheep/left.png';
+sheepImages.right.src = 'images/sheep/right.png';
+
 export class Sheep {
     constructor(playerX, playerY) {
         this.x = playerX + Math.random() * 100 - 50;
@@ -11,18 +22,23 @@ export class Sheep {
         this.state = 'idle';
         this.id = Math.random();
         this.wanderAngle = 0;
+        this.facing = 'down';
+
+        // Dimensions for the sprite
+        this.width = 80;
+        this.height = 80;
+
+        // Hysteresis for direction switching
+        this.lastFacingTime = 0;
     }
 
-    update(dt, player, world, sheepList, gameRef) { // gameRef needed for notifications/gold? Maybe just return events.
-        // Let's keep it simple: return events or update self. 
-        // We will pass essential data.
-
+    update(dt, player, world, sheepList, gameRef) {
         // 1. Wool Growth
         if (this.woolGrowth < 100) this.woolGrowth += dt * 5;
 
         // 2. Thirst & Hunger
-        this.thirst += dt * 2.0;
-        this.hunger += dt * 1.5;
+        this.thirst += dt * 1.0;
+        this.hunger += dt * 0.75;
         if (this.thirst > 120) this.thirst = 120;
         if (this.hunger > 120) this.hunger = 120;
 
@@ -54,12 +70,15 @@ export class Sheep {
         let speed = 40;
         const distToPlayer = Math.hypot(this.x - player.x, this.y - player.y);
 
-        if (this.thirst > 70 && !inOasis) {
+
+        const perceptionRadius = 400;
+
+        if (this.thirst > 70 && !inOasis && distToOasis < perceptionRadius) {
             const angle = Math.atan2(world.oasis.y - this.y, world.oasis.x - this.x);
             moveX = Math.cos(angle);
             moveY = Math.sin(angle);
             speed = 60;
-        } else if (this.hunger > 70 && !inGrassland) {
+        } else if (this.hunger > 70 && !inGrassland && distToGrass < perceptionRadius) {
             const angle = Math.atan2(world.grassland.y - this.y, world.grassland.x - this.x);
             moveX = Math.cos(angle);
             moveY = Math.sin(angle);
@@ -92,17 +111,50 @@ export class Sheep {
             }
         });
 
+        // Update facing direction with hysteresis
+        // Only change direction if enough time has passed (e.g., 500ms) or if the movement is significant
+        if (Date.now() - this.lastFacingTime > 500) {
+            if (Math.abs(moveX) > Math.abs(moveY)) {
+                if (moveX > 0) {
+                    if (this.facing !== 'right') {
+                        this.facing = 'right';
+                        this.lastFacingTime = Date.now();
+                    }
+                }
+                else if (moveX < 0) {
+                    if (this.facing !== 'left') {
+                        this.facing = 'left';
+                        this.lastFacingTime = Date.now();
+                    }
+                }
+            } else {
+                if (moveY > 0) {
+                    if (this.facing !== 'down') {
+                        this.facing = 'down';
+                        this.lastFacingTime = Date.now();
+                    }
+                }
+                else if (moveY < 0) {
+                    if (this.facing !== 'up') {
+                        this.facing = 'up';
+                        this.lastFacingTime = Date.now();
+                    }
+                }
+            }
+        }
+
         this.x += moveX * speed * dt;
         this.y += moveY * speed * dt;
 
-        return null; // No special event
+        return null;
     }
 
     draw(ctx) {
-        // Shadow
+        // Shadow (Rendered before sprite for natural layering)
+        ctx.shadowBlur = 0;
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + 10, 12, 6, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + 10, 20, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Visual indicator for wool readiness
@@ -113,25 +165,33 @@ export class Sheep {
             ctx.shadowBlur = 0;
         }
 
-        drawEmoji(ctx, this.x, this.y, '🐑', 24);
+        // Draw Sprite
+        const img = sheepImages[this.facing];
+        if (img && img.complete) {
+            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+        } else {
+            // Fallback if image not loaded yet
+            drawEmoji(ctx, this.x, this.y, '🐑', 24);
+        }
+
         ctx.shadowBlur = 0;
 
         // Thirst meter
         if (this.thirst > 50) {
             ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(this.x - 10, this.y - 25, 20, 4);
+            ctx.fillRect(this.x - 10, this.y - 45, 20, 4);
             ctx.fillStyle = this.thirst > 80 ? 'red' : '#4fa4b8';
             const thirstW = (1 - (this.thirst / 100)) * 20;
-            ctx.fillRect(this.x - 10, this.y - 25, Math.max(0, thirstW), 4);
+            ctx.fillRect(this.x - 10, this.y - 45, Math.max(0, thirstW), 4);
         }
 
         // Hunger meter
         if (this.hunger > 50) {
             ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(this.x - 10, this.y - 32, 20, 4);
+            ctx.fillRect(this.x - 10, this.y - 52, 20, 4);
             ctx.fillStyle = this.hunger > 80 ? 'red' : '#a0522d';
             const hungerW = (1 - (this.hunger / 100)) * 20;
-            ctx.fillRect(this.x - 10, this.y - 32, Math.max(0, hungerW), 4);
+            ctx.fillRect(this.x - 10, this.y - 52, Math.max(0, hungerW), 4);
         }
     }
 }

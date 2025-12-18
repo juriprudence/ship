@@ -21,7 +21,7 @@ export class Game {
         this.camera = { x: 0, y: 0 };
         this.player = new Player();
         this.world = new World();
-        this.trought = new Trought();
+        this.trought = new Trought(1); // Day 1 multiplier
         this.sheepList = [];
         this.MAX_SHEEP = 50;
 
@@ -204,9 +204,9 @@ export class Game {
         this.trought.update(dt);
 
         if (this.trought.isExpired) {
-            // Respawn a new one at a random place or just reset state to wait for next purchase?
-            // The user said "destroy automaticly", so let's create a new one to be bought again.
-            this.trought = new Trought();
+            // Range increases by 1.0 for each day (e.g., Day 1: 1.0, Day 2: 2.0, Day 3: 3.0, etc.)
+            const rangeMultiplier = 1 + (this.gameState.day - 1) * 1.0;
+            this.trought = new Trought(rangeMultiplier);
             this.showNotification("انتهى مفعول الحوض! 🥀");
         }
 

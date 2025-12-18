@@ -1,12 +1,19 @@
 export class Trought {
-    constructor() {
-        // Spawn close to player for visibility
-        this.x = (Math.random() - 0.5) * 400;
-        this.y = (Math.random() - 0.5) * 400;
+    constructor(rangeMultiplier = 1) {
+        // Using a ring-based spawn to ensure it's not too close to the center
+        // The minimum and maximum distance both scale with the range multiplier
+        const minDistance = 300 * rangeMultiplier;
+        const maxDistance = 800 * rangeMultiplier;
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = minDistance + Math.random() * (maxDistance - minDistance);
+
+        this.x = Math.cos(angle) * distance;
+        this.y = Math.sin(angle) * distance;
 
         this.isTransformed = false;
         this.timer = 30; // 30 seconds of life once active
-        this.maxUsers = 5;
+        this.maxUsers = 30;
         this.currentUsers = 0;
         this.isExpired = false;
 
@@ -22,7 +29,12 @@ export class Trought {
 
     update(dt) {
         if (this.isTransformed && !this.isExpired) {
-            this.timer -= dt;
+            // Drains faster if more sheep are using it
+            // With 30 sheep, it should finish in 10 seconds (3x speed).
+            // Formula: 1 + (currentUsers / 15) => at 30 users, rate is 1 + 2 = 3.
+            const drainRate = 1 + (this.currentUsers / 15);
+            this.timer -= dt * drainRate;
+
             if (this.timer <= 0) {
                 this.isExpired = true;
                 this.currentUsers = 0; // Clear all users

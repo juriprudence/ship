@@ -152,6 +152,54 @@
             transition: opacity 1s;
         }
 
+        /* Purchase Modal */
+        #purchase-modal {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(40, 30, 20, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #ffd700;
+            pointer-events: auto;
+            color: white;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            z-index: 1001;
+        }
+
+        #purchase-modal h3 {
+            margin-top: 0;
+            color: #deb887;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .confirm-btn {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .cancel-btn {
+            background: #f44336;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
         /* Scanline effect for retro vibe */
         .scanlines {
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
@@ -190,6 +238,15 @@
             <button class="shop-btn" id="buy-sheep-btn">شراء خروف (50 🪙)</button>
             <button class="shop-btn" id="upgrade-speed-btn">حذاء السرعة (100 🪙)</button>
             <div style="margin-top:10px; font-size: 12px; color: #aaa;">ابتعد للإغلاق</div>
+        </div>
+
+        <div id="purchase-modal">
+            <h3>شراء الحوض 🚰</h3>
+            <p>هل تريد شراء الحوض مقابل 100 🪙؟</p>
+            <div class="modal-buttons">
+                <button class="confirm-btn" id="confirm-purchase">نعم ✅</button>
+                <button class="cancel-btn" id="cancel-purchase">لا ❌</button>
+            </div>
         </div>
     </div>
 

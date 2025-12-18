@@ -30,9 +30,10 @@ export class Sheep {
 
         // Hysteresis for direction switching
         this.lastFacingTime = 0;
+        this.isUsingTrought = false;
     }
 
-    update(dt, player, world, sheepList, gameRef) {
+    update(dt, player, world, sheepList, trought) {
         // 1. Wool Growth
         if (this.woolGrowth < 100) this.woolGrowth += dt * 5;
 
@@ -54,6 +55,9 @@ export class Sheep {
         const distToGrass = Math.hypot(this.x - world.grassland.x, this.y - world.grassland.y);
         const inGrassland = distToGrass < world.grassland.radius;
 
+        const distToTrought = trought ? Math.hypot(this.x - trought.x, this.y - trought.y) : Infinity;
+        const inTrought = distToTrought < 50 && trought && trought.isTransformed;
+
         if (inOasis) {
             this.thirst -= dt * 30;
             if (this.thirst < 0) this.thirst = 0;
@@ -62,6 +66,35 @@ export class Sheep {
         if (inGrassland) {
             this.hunger -= dt * 25;
             if (this.hunger < 0) this.hunger = 0;
+        }
+
+        if (inTrought) {
+            if (!this.isUsingTrought) {
+                this.isUsingTrought = trought.reserveSlot();
+            }
+
+            if (this.isUsingTrought) {
+                // Eating AND Drinking - ONLY if slot reserved
+                this.thirst -= dt * 40;
+                this.hunger -= dt * 35;
+                if (this.thirst < 0) this.thirst = 0;
+                if (this.hunger < 0) this.hunger = 0;
+
+                // Release slot if no longer needed
+                if (this.thirst === 0 && this.hunger === 0) {
+                    trought.releaseSlot();
+                    this.isUsingTrought = false;
+                }
+            }
+        } else if (this.isUsingTrought) {
+            // Sheep was using it but moved away or it expired
+            trought.releaseSlot();
+            this.isUsingTrought = false;
+        }
+
+        // Reset if trought is gone
+        if (this.isUsingTrought && (!trought || !trought.isTransformed || trought.isExpired)) {
+            this.isUsingTrought = false;
         }
 
         // --- Movement Logic ---
@@ -73,7 +106,22 @@ export class Sheep {
 
         const perceptionRadius = 400;
 
-        if (this.thirst > 70 && !inOasis && distToOasis < perceptionRadius) {
+        // Trought Priority
+        if (this.isUsingTrought && inTrought) {
+            // Stay at the trought while using it
+            const angle = Math.atan2(trought.y - this.y, trought.x - this.x);
+            moveX = Math.cos(angle) * 0.2;
+            moveY = Math.sin(angle) * 0.2;
+            speed = 20;
+        } else if (trought && trought.isTransformed && !trought.isExpired && (this.thirst > 50 || this.hunger > 50) && !inTrought && (trought.currentUsers < trought.maxUsers || this.isUsingTrought)) {
+            const angle = Math.atan2(trought.y - this.y, trought.x - this.x);
+            moveX = Math.cos(angle);
+            moveY = Math.sin(angle);
+            speed = 70;
+        } else if (this.isUsingTrought) {
+            // If somehow using it but none of the above (shouldn't happen but for safety)
+            speed = 0;
+        } else if (this.thirst > 70 && !inOasis && distToOasis < perceptionRadius) {
             const angle = Math.atan2(world.oasis.y - this.y, world.oasis.x - this.x);
             moveX = Math.cos(angle);
             moveY = Math.sin(angle);

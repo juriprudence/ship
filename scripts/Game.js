@@ -2,6 +2,7 @@ import { Player } from './Player.js';
 import { World } from './World.js';
 import { Sheep } from './Sheep.js';
 import { Particle, Ripple } from './Utils.js';
+import { Trought } from './Trought.js';
 
 export class Game {
     constructor() {
@@ -20,6 +21,7 @@ export class Game {
         this.camera = { x: 0, y: 0 };
         this.player = new Player();
         this.world = new World();
+        this.trought = new Trought();
         this.sheepList = [];
         this.MAX_SHEEP = 50;
 
@@ -35,7 +37,9 @@ export class Game {
         this.handleInput = this.handleInput.bind(this);
         this.buySheep = this.buySheep.bind(this);
         this.upgradeSpeed = this.upgradeSpeed.bind(this);
-        this.restartGame = this.restartGame.bind(this); // Bind restart logic
+        this.restartGame = this.restartGame.bind(this);
+        this.confirmPurchase = this.confirmPurchase.bind(this);
+        this.cancelPurchase = this.cancelPurchase.bind(this);
     }
 
     init() {
@@ -46,6 +50,8 @@ export class Game {
         // Bind UI buttons
         document.getElementById('buy-sheep-btn').addEventListener('click', this.buySheep);
         document.getElementById('upgrade-speed-btn').addEventListener('click', this.upgradeSpeed);
+        document.getElementById('confirm-purchase').addEventListener('click', this.confirmPurchase);
+        document.getElementById('cancel-purchase').addEventListener('click', this.cancelPurchase);
 
         // Initial Spawn
         for (let i = 0; i < 20; i++) this.spawnSheep();
@@ -68,6 +74,17 @@ export class Game {
         const rect = this.canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left + this.camera.x;
         const clickY = e.clientY - rect.top + this.camera.y;
+
+        if (this.trought.checkBounds(clickX, clickY)) {
+            if (this.gameState.gold >= 100) {
+                // Show custom modal instead of alert
+                this.pendingPurchasePos = { x: clickX, y: clickY };
+                document.getElementById('purchase-modal').style.display = 'block';
+            } else {
+                this.showNotification("ليس لديك ذهب كافٍ! (تحتاج 100) ❌");
+            }
+            return;
+        }
 
         let clickedSheep = false;
         for (let s of this.sheepList) {
@@ -121,6 +138,22 @@ export class Game {
         this.updateUI();
     }
 
+    confirmPurchase() {
+        if (this.gameState.gold >= 100 && this.pendingPurchasePos) {
+            this.gameState.gold -= 100;
+            this.trought.isTransformed = true;
+            this.createParticleVFX(this.pendingPurchasePos.x, this.pendingPurchasePos.y, '#ffd700', 20);
+            this.showNotification("تم شراء الحوض! 🚰");
+            this.updateUI();
+        }
+        this.cancelPurchase(); // Close modal
+    }
+
+    cancelPurchase() {
+        document.getElementById('purchase-modal').style.display = 'none';
+        this.pendingPurchasePos = null;
+    }
+
     restartGame() {
         // Reset Game State
         this.gameState = {
@@ -168,6 +201,14 @@ export class Game {
         }
 
         this.player.update(dt);
+        this.trought.update(dt);
+
+        if (this.trought.isExpired) {
+            // Respawn a new one at a random place or just reset state to wait for next purchase?
+            // The user said "destroy automaticly", so let's create a new one to be bought again.
+            this.trought = new Trought();
+            this.showNotification("انتهى مفعول الحوض! 🥀");
+        }
 
         // Camera Follow
         const targetCamX = this.player.x - this.canvas.width / 2;
@@ -192,7 +233,7 @@ export class Game {
         // Sheep Logic
         const survivingSheep = [];
         this.sheepList.forEach(s => {
-            const event = s.update(dt, this.player, this.world, this.sheepList);
+            const event = s.update(dt, this.player, this.world, this.sheepList, this.trought);
             if (event && event.died) {
                 this.showNotification(`مات خروف من ${event.cause}! 💀`);
                 this.updateUI();
@@ -225,6 +266,7 @@ export class Game {
         this.ctx.translate(-this.camera.x, -this.camera.y);
 
         this.world.draw(this.ctx, this.camera, this.canvas.width, this.canvas.height);
+        this.trought.draw(this.ctx);
 
         this.sheepList.forEach(s => s.draw(this.ctx));
         this.player.draw(this.ctx, this.gameState.time);

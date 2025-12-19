@@ -144,6 +144,7 @@ export class Game {
         sheep.woolGrowth = 0;
         this.gameState.woolCount++;
         this.gameState.gold += 10;
+        this.soundManager.playEffect('shear_the_wool');
         this.showNotification("+10 ذهب 🪙");
         this.updateUI();
     }

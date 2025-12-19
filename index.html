@@ -98,10 +98,9 @@
         #shop-menu {
             position: absolute;
             bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            right: 20px;
             background: rgba(40, 30, 20, 0.95);
-            padding: 20px;
+            padding: 15px;
             border-radius: 12px;
             border: 2px solid #8b4513;
             display: none;
@@ -110,6 +109,54 @@
             color: white;
             text-align: center;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .header-shop-btn {
+            background: #ffd700;
+            color: #432b14;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .header-shop-btn:hover {
+            background: #ffec80;
+            transform: scale(1.05);
+        }
+
+        .close-shop-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #f44336;
+            color: white;
+            border: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 101;
+        }
+
+        .close-shop-btn:hover {
+            background: #d32f2f;
+            transform: scale(1.1);
         }
 
         #shop-menu h2 {
@@ -318,7 +365,8 @@
 
     <div id="ui-layer">
         <div class="top-bar">
-            <div style="display:flex; gap: 15px;">
+            <div style="display:flex; gap: 15px; align-items: center;">
+                <button class="header-shop-btn" id="open-shop-btn">🛒 المتجر</button>
                 <div class="resource">🪙 <span id="gold-display">0</span></div>
                 <div class="resource">🐑 <span id="sheep-display">20</span></div>
                 <div class="resource">🧶 <span id="wool-display">0</span></div>
@@ -333,10 +381,11 @@
         </div>
 
         <div id="shop-menu">
-            <h2>⛺ ترقيات المخيم</h2>
-            <button class="shop-btn" id="buy-sheep-btn">شراء خروف (50 🪙)</button>
+            <button class="close-shop-btn" id="close-shop-btn">×</button>
+            <h2>🛒 المتجر</h2>
+            <button class="shop-btn" id="buy-sheep-btn">شراء خروف (100 🪙)</button>
+            <button class="shop-btn" id="buy-grassland-btn">شراء عشب (500 🪙)</button>
             <button class="shop-btn" id="upgrade-speed-btn">حذاء السرعة (100 🪙)</button>
-            <div style="margin-top:10px; font-size: 12px; color: #aaa;">ابتعد للإغلاق</div>
         </div>
 
         <div id="purchase-modal">

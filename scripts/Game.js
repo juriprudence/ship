@@ -32,6 +32,9 @@ export class Game {
         this.soundManager = new SoundManager();
         this.gameStarted = false;
 
+        this.placementMode = null; // 'grassland' or null
+        this.mousePos = { x: 0, y: 0 };
+
         this.bindMethods();
     }
 
@@ -41,11 +44,13 @@ export class Game {
         this.handleInput = this.handleInput.bind(this);
         this.buySheep = this.buySheep.bind(this);
         this.upgradeSpeed = this.upgradeSpeed.bind(this);
+        this.buyGrassland = this.buyGrassland.bind(this);
         this.restartGame = this.restartGame.bind(this);
         this.confirmPurchase = this.confirmPurchase.bind(this);
         this.cancelPurchase = this.cancelPurchase.bind(this);
         this.startGame = this.startGame.bind(this);
         this.handleSoundToggle = this.handleSoundToggle.bind(this);
+        this.toggleShop = this.toggleShop.bind(this);
     }
 
     init() {
@@ -56,9 +61,14 @@ export class Game {
         // Bind UI buttons
         document.getElementById('buy-sheep-btn').addEventListener('click', this.buySheep);
         document.getElementById('upgrade-speed-btn').addEventListener('click', this.upgradeSpeed);
+        document.getElementById('buy-grassland-btn').addEventListener('click', this.buyGrassland);
         document.getElementById('confirm-purchase').addEventListener('click', this.confirmPurchase);
         document.getElementById('cancel-purchase').addEventListener('click', this.cancelPurchase);
         document.getElementById('start-game-btn').addEventListener('click', this.startGame);
+
+        // Bind shop toggle buttons
+        document.getElementById('open-shop-btn').addEventListener('click', () => this.toggleShop(true));
+        document.getElementById('close-shop-btn').addEventListener('click', () => this.toggleShop(false));
 
         // Sound toggle binding
         const soundCheckbox = document.getElementById('sound-checkbox');
@@ -68,6 +78,13 @@ export class Game {
             this.soundManager.setSoundEnabled(soundCheckbox.checked);
         }
 
+        // Mouse movement tracking for placement ghost
+        window.addEventListener('pointermove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mousePos.x = e.clientX - rect.left + this.camera.x;
+            this.mousePos.y = e.clientY - rect.top + this.camera.y;
+        });
+
         // Don't start loop or spawn sheep yet
         // requestAnimationFrame(this.gameLoop);
     }
@@ -76,6 +93,13 @@ export class Game {
         this.soundManager.setSoundEnabled(e.target.checked);
         if (e.target.checked) {
             this.soundManager.playEffect('toggle_on');
+        }
+    }
+
+    toggleShop(show) {
+        const shopMenu = document.getElementById('shop-menu');
+        if (shopMenu) {
+            shopMenu.style.display = show ? 'block' : 'none';
         }
     }
 
@@ -104,6 +128,11 @@ export class Game {
         const rect = this.canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left + this.camera.x;
         const clickY = e.clientY - rect.top + this.camera.y;
+
+        if (this.placementMode === 'grassland') {
+            this.placeGrassland(clickX, clickY);
+            return;
+        }
 
         if (this.trought.checkBounds(clickX, clickY)) {
             if (this.gameState.gold >= 100) {
@@ -150,8 +179,8 @@ export class Game {
     }
 
     buySheep() {
-        if (this.gameState.gold >= 50) {
-            this.gameState.gold -= 50;
+        if (this.gameState.gold >= 100) {
+            this.gameState.gold -= 100;
             this.spawnSheep();
             this.showNotification("تم شراء خروف جديد! 🐑");
         }
@@ -167,6 +196,28 @@ export class Game {
             document.getElementById('upgrade-speed-btn').textContent = "السرعة القصوى";
         }
         this.updateUI();
+    }
+
+    buyGrassland() {
+        if (this.gameState.gold >= 500) {
+            this.placementMode = 'grassland';
+            this.toggleShop(false);
+            this.showNotification("اختر مكاناً لزراعة العشب! 🌿");
+        }
+        this.updateUI();
+    }
+
+    placeGrassland(x, y) {
+        if (this.gameState.gold >= 500) {
+            this.gameState.gold -= 500;
+            import('./Grassland.js').then(m => {
+                this.world.grasslands.push(new m.Grassland(x, y));
+            });
+            this.createParticleVFX(x, y, '#6ab04c', 20);
+            this.showNotification("تمت زراعة العشب! 🌿");
+            this.placementMode = null;
+            this.updateUI();
+        }
     }
 
     confirmPurchase() {
@@ -252,19 +303,7 @@ export class Game {
         this.camera.x += (targetCamX - this.camera.x) * 5 * dt;
         this.camera.y += (targetCamY - this.camera.y) * 5 * dt;
 
-        // Shop UI visibility
-        const distToTent = Math.hypot(this.player.x - this.world.tent.x, this.player.y - this.world.tent.y);
-        const shopMenu = document.getElementById('shop-menu');
-        if (distToTent < 100) {
-            shopMenu.style.display = 'block';
-            document.getElementById('buy-sheep-btn').disabled = this.gameState.gold < 50;
-            const upgradeBtn = document.getElementById('upgrade-speed-btn');
-            if (upgradeBtn.innerText !== "السرعة القصوى") {
-                upgradeBtn.disabled = this.gameState.gold < 100;
-            }
-        } else {
-            shopMenu.style.display = 'none';
-        }
+
 
         // Sheep Logic
         const survivingSheep = [];
@@ -273,6 +312,7 @@ export class Game {
             const event = s.update(dt, this.player, this.world, this.sheepList, this.trought);
             if (event && event.died) {
                 this.showNotification(`مات خروف من ${event.cause}! 💀`);
+                this.soundManager.playEffect('daying_sheep');
                 this.updateUI();
             } else {
                 survivingSheep.push(s);
@@ -313,6 +353,20 @@ export class Game {
 
         this.sheepList.forEach(s => s.draw(this.ctx));
         this.player.draw(this.ctx, this.gameState.time);
+
+        // Placement Ghost
+        if (this.placementMode === 'grassland') {
+            this.ctx.globalAlpha = 0.5;
+            this.ctx.fillStyle = '#6ab04c';
+            this.ctx.beginPath();
+            this.ctx.arc(this.mousePos.x, this.mousePos.y, 80, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.font = '50px serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText('🌿', this.mousePos.x, this.mousePos.y);
+            this.ctx.globalAlpha = 1.0;
+        }
 
         // VFX
         this.particles.forEach(p => p.draw(this.ctx));
@@ -371,6 +425,17 @@ export class Game {
         document.getElementById('sheep-display').textContent = this.sheepList.length;
         document.getElementById('wool-display').textContent = this.gameState.woolCount;
         document.getElementById('day-display').textContent = Math.floor(this.gameState.day);
+
+        // Update Shop Buttons
+        const buyBtn = document.getElementById('buy-sheep-btn');
+        const buyGrasslandBtn = document.getElementById('buy-grassland-btn');
+        const upgradeBtn = document.getElementById('upgrade-speed-btn');
+
+        if (buyBtn) buyBtn.disabled = this.gameState.gold < 100;
+        if (buyGrasslandBtn) buyGrasslandBtn.disabled = this.gameState.gold < 500;
+        if (upgradeBtn && upgradeBtn.textContent !== "السرعة القصوى") {
+            upgradeBtn.disabled = this.gameState.gold < 100;
+        }
     }
 }
 

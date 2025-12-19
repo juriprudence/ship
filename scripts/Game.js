@@ -35,13 +35,31 @@ export class Game {
         this.placementMode = null; // 'grassland' or null
         this.mousePos = { x: 0, y: 0 };
 
+        this.extractionState = {
+            sheep: null,
+            timer: 0,
+            active: false
+        };
+
+        this.pointer = {
+            isDown: false,
+            startX: 0,
+            startY: 0,
+            isDragging: false,
+            dragThreshold: 15,
+            lastX: 0,
+            lastY: 0
+        };
+
         this.bindMethods();
     }
 
     bindMethods() {
         this.resize = this.resize.bind(this);
         this.gameLoop = this.gameLoop.bind(this);
-        this.handleInput = this.handleInput.bind(this);
+        this.onPointerDown = this.onPointerDown.bind(this);
+        this.onPointerMove = this.onPointerMove.bind(this);
+        this.onPointerUp = this.onPointerUp.bind(this);
         this.buySheep = this.buySheep.bind(this);
         this.upgradeSpeed = this.upgradeSpeed.bind(this);
         this.buyGrassland = this.buyGrassland.bind(this);
@@ -56,7 +74,11 @@ export class Game {
     init() {
         this.resize();
         window.addEventListener('resize', this.resize);
-        this.canvas.addEventListener('pointerdown', this.handleInput);
+
+        this.canvas.addEventListener('pointerdown', this.onPointerDown);
+        window.addEventListener('pointermove', this.onPointerMove);
+        window.addEventListener('pointerup', this.onPointerUp);
+        window.addEventListener('pointercancel', this.onPointerUp);
 
         // Bind UI buttons
         document.getElementById('buy-sheep-btn').addEventListener('click', this.buySheep);
@@ -78,16 +100,11 @@ export class Game {
             this.soundManager.setSoundEnabled(soundCheckbox.checked);
         }
 
-        // Mouse movement tracking for placement ghost
-        window.addEventListener('pointermove', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            this.mousePos.x = e.clientX - rect.left + this.camera.x;
-            this.mousePos.y = e.clientY - rect.top + this.camera.y;
-        });
-
-        // Don't start loop or spawn sheep yet
-        // requestAnimationFrame(this.gameLoop);
+        // Mouse movement tracking for placement ghost - integrated into onPointerMove
     }
+
+    // Don't start loop or spawn sheep yet
+    // requestAnimationFrame(this.gameLoop);
 
     handleSoundToggle(e) {
         this.soundManager.setSoundEnabled(e.target.checked);
@@ -124,24 +141,32 @@ export class Game {
         this.updateUI();
     }
 
-    handleInput(e) {
+    onPointerDown(e) {
         const rect = this.canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left + this.camera.x;
         const clickY = e.clientY - rect.top + this.camera.y;
 
+        this.pointer.isDown = true;
+        this.pointer.startX = clickX;
+        this.pointer.startY = clickY;
+        this.pointer.lastX = clickX;
+        this.pointer.lastY = clickY;
+        this.pointer.isDragging = false;
+
         if (this.placementMode === 'grassland') {
             this.placeGrassland(clickX, clickY);
+            this.pointer.isDown = false; // Reset so dragging doesn't start
             return;
         }
 
         if (this.trought.checkBounds(clickX, clickY)) {
             if (this.gameState.gold >= 100) {
-                // Show custom modal instead of alert
                 this.pendingPurchasePos = { x: clickX, y: clickY };
                 document.getElementById('purchase-modal').style.display = 'block';
             } else {
                 this.showNotification("ليس لديك ذهب كافٍ! (تحتاج 100) ❌");
             }
+            this.pointer.isDown = false;
             return;
         }
 
@@ -151,31 +176,111 @@ export class Game {
             const dy = s.y - clickY;
             if (dx * dx + dy * dy < 900) {
                 if (s.woolGrowth >= 100) {
-                    this.shearSheep(s);
+                    this.startExtraction(s);
                     clickedSheep = true;
-                    // Visual feedback
-                    this.createParticleVFX(s.x, s.y, '#fff', 10);
                 } else {
-                    // Nudge
                     s.x += (Math.random() - 0.5) * 20;
                     s.y += (Math.random() - 0.5) * 20;
                 }
             }
         }
 
-        if (!clickedSheep) {
-            this.player.handleInput(clickX, clickY);
-            this.createRippleVFX(clickX, clickY);
+        if (clickedSheep) {
+            this.pointer.isDown = false;
         }
     }
 
-    shearSheep(sheep) {
+    onPointerMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left + this.camera.x;
+        const clickY = e.clientY - rect.top + this.camera.y;
+
+        this.mousePos.x = clickX;
+        this.mousePos.y = clickY;
+
+        if (!this.pointer.isDown) return;
+
+        const dx = clickX - this.pointer.startX;
+        const dy = clickY - this.pointer.startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > this.pointer.dragThreshold || this.pointer.isDragging) {
+            this.pointer.isDragging = true;
+
+            // If we were extracting, cancel it
+            if (this.extractionState.active) {
+                this.cancelExtraction("تم إلغاء جمع الذهب بسبب الحركة! ❌");
+            }
+        }
+    }
+
+    onPointerUp(e) {
+        if (!this.pointer.isDown) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left + this.camera.x;
+        const clickY = e.clientY - rect.top + this.camera.y;
+
+        if (!this.pointer.isDragging) {
+            // It was a click
+            if (this.extractionState.active) {
+                this.cancelExtraction("تم إلغاء جمع الذهب بالنقر على الأرض! ❌");
+            }
+            this.player.handleInput(clickX, clickY);
+            this.createRippleVFX(clickX, clickY);
+        } else {
+            // Drag finished, stop player
+            this.player.targetX = this.player.x;
+            this.player.targetY = this.player.y;
+            this.player.isMoving = false;
+        }
+
+        this.pointer.isDown = false;
+        this.pointer.isDragging = false;
+    }
+
+    startExtraction(sheep) {
+        if (this.extractionState.active) return;
+
+        // Note: We don't shear yet, we wait until reached?
+        // Actually user said "when player take wool to go to the sheep", 
+        // implies taking it starts the journey. I'll keep wool reset here but maybe move it to completion?
+        // Let's move wool reset to completion for more realism, or keep it to show it's "claimed".
+        // I'll keep it claimed (woolGrowth = 0) so other clicks don't trigger it.
+
         sheep.woolGrowth = 0;
+        this.extractionState = {
+            sheep: sheep,
+            timer: 0,
+            active: true,
+            hasReached: false
+        };
+
+        // Move player to sheep
+        this.player.handleInput(sheep.x, sheep.y);
+
+        this.soundManager.playEffect('shear_the_wool');
+        this.createParticleVFX(sheep.x, sheep.y, '#fff', 10);
+        this.showNotification("توجه إلى الخروف لجمع الذهب! 🚶‍♂️");
+    }
+
+    cancelExtraction(message) {
+        this.extractionState.active = false;
+        this.extractionState.sheep = null;
+        if (message) this.showNotification(message);
+    }
+
+    completeExtraction() {
         this.gameState.woolCount++;
         this.gameState.gold += 10;
-        this.soundManager.playEffect('shear_the_wool');
         this.showNotification("+10 ذهب 🪙");
         this.updateUI();
+        this.extractionState.active = false;
+        this.extractionState.sheep = null;
+    }
+
+    shearSheep(sheep) {
+        // This old method is now replaced by startExtraction
     }
 
     buySheep() {
@@ -282,8 +387,57 @@ export class Game {
             this.updateUI();
         }
 
+        // Pointer Drag Movement
+        if (this.pointer.isDragging) {
+            const dx = this.mousePos.x - this.pointer.startX;
+            const dy = this.mousePos.y - this.pointer.startY;
+            const angle = Math.atan2(dy, dx);
+            const targetDist = 100;
+
+            this.player.handleInput(
+                this.player.x + Math.cos(angle) * targetDist,
+                this.player.y + Math.sin(angle) * targetDist
+            );
+        }
+
         this.player.update(dt, this.soundManager);
         this.trought.update(dt);
+
+        // Extraction Logic
+        if (this.extractionState.active) {
+            const sheep = this.extractionState.sheep;
+            const dist = Math.hypot(this.player.x - sheep.x, this.player.y - sheep.y);
+
+            // Periodically update target to follow sheep if it moves
+            if (!this.extractionState.hasReached) {
+                this.player.targetX = sheep.x;
+                this.player.targetY = sheep.y;
+            }
+
+            if (dist < 20) {
+                if (!this.extractionState.hasReached) {
+                    this.extractionState.hasReached = true;
+                    this.showNotification("جاري جمع الذهب... اثبت مكانك! ⏳");
+                }
+                this.extractionState.timer += dt;
+
+                // Stick to sheep
+                this.player.x = sheep.x;
+                this.player.y = sheep.y;
+                this.player.targetX = sheep.x;
+                this.player.targetY = sheep.y;
+                this.player.isMoving = false;
+
+            } else if (this.extractionState.hasReached && dist > 40) {
+                this.cancelExtraction("ابتعدت كثيراً! تم إلغاء جمع الذهب ❌");
+            } else if (dist > 350 && !this.extractionState.hasReached) {
+                this.cancelExtraction("الخروف بعيد جداً! ❌");
+            }
+
+            if (this.extractionState.timer >= 5) {
+                this.completeExtraction();
+            }
+        }
 
         const worldEvent = this.world.update(dt, this.player.x, this.player.y, this.gameState.day);
         if (worldEvent.respawned) {
@@ -366,6 +520,23 @@ export class Game {
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText('🌿', this.mousePos.x, this.mousePos.y);
             this.ctx.globalAlpha = 1.0;
+        }
+
+        // Extraction Progress Bar
+        if (this.extractionState.active) {
+            const barWidth = 40;
+            const barHeight = 6;
+            const px = this.player.x - barWidth / 2;
+            const py = this.player.y - 70; // Above player
+
+            // Background
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.fillRect(px, py, barWidth, barHeight);
+
+            // Progress
+            const progress = Math.min(this.extractionState.timer / 5, 1);
+            this.ctx.fillStyle = '#ffd700'; // Gold color
+            this.ctx.fillRect(px, py, barWidth * progress, barHeight);
         }
 
         // VFX

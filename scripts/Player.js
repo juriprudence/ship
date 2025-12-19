@@ -28,7 +28,7 @@ export class Player {
         this.direction = 1;
     }
 
-    update(dt) {
+    update(dt, soundManager) {
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -52,6 +52,11 @@ export class Player {
             if (this.animationTimer > 0.2) { // Toggle every 0.2s
                 this.animationFrame = (this.animationFrame + 1) % 2;
                 this.animationTimer = 0;
+
+                // Play footstep sound on frame toggle
+                if (soundManager) {
+                    soundManager.playFootstep();
+                }
             }
         } else {
             this.isMoving = false;

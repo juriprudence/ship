@@ -3,6 +3,7 @@ import { World } from './World.js';
 import { Sheep } from './Sheep.js';
 import { Particle, Ripple } from './Utils.js';
 import { Trought } from './Trought.js';
+import { SoundManager } from './SoundManager.js';
 
 export class Game {
     constructor() {
@@ -28,6 +29,7 @@ export class Game {
         this.particles = [];
         this.ripples = [];
 
+        this.soundManager = new SoundManager();
         this.gameStarted = false;
 
         this.bindMethods();
@@ -43,6 +45,7 @@ export class Game {
         this.confirmPurchase = this.confirmPurchase.bind(this);
         this.cancelPurchase = this.cancelPurchase.bind(this);
         this.startGame = this.startGame.bind(this);
+        this.handleSoundToggle = this.handleSoundToggle.bind(this);
     }
 
     init() {
@@ -57,8 +60,23 @@ export class Game {
         document.getElementById('cancel-purchase').addEventListener('click', this.cancelPurchase);
         document.getElementById('start-game-btn').addEventListener('click', this.startGame);
 
+        // Sound toggle binding
+        const soundCheckbox = document.getElementById('sound-checkbox');
+        if (soundCheckbox) {
+            soundCheckbox.addEventListener('change', this.handleSoundToggle);
+            // Initialize state in case browser remembered checkbox state
+            this.soundManager.setSoundEnabled(soundCheckbox.checked);
+        }
+
         // Don't start loop or spawn sheep yet
         // requestAnimationFrame(this.gameLoop);
+    }
+
+    handleSoundToggle(e) {
+        this.soundManager.setSoundEnabled(e.target.checked);
+        if (e.target.checked) {
+            this.soundManager.playEffect('toggle_on');
+        }
     }
 
     startGame() {
@@ -212,7 +230,7 @@ export class Game {
             this.updateUI();
         }
 
-        this.player.update(dt);
+        this.player.update(dt, this.soundManager);
         this.trought.update(dt);
 
         const worldEvent = this.world.update(dt, this.player.x, this.player.y, this.gameState.day);
@@ -249,6 +267,7 @@ export class Game {
 
         // Sheep Logic
         const survivingSheep = [];
+        let anyoneEatingOnScreen = false;
         this.sheepList.forEach(s => {
             const event = s.update(dt, this.player, this.world, this.sheepList, this.trought);
             if (event && event.died) {
@@ -256,9 +275,15 @@ export class Game {
                 this.updateUI();
             } else {
                 survivingSheep.push(s);
+                if (s.isEating && s.isVisible(this.camera, this.canvas.width, this.canvas.height)) {
+                    anyoneEatingOnScreen = true;
+                }
             }
         });
         this.sheepList = survivingSheep;
+
+        // Update Sound
+        this.soundManager.updateGrassEating(anyoneEatingOnScreen);
 
         // Game Over Check
         if (this.sheepList.length === 0 && this.gameState.gameActive) {

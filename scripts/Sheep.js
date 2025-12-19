@@ -31,6 +31,7 @@ export class Sheep {
         // Hysteresis for direction switching
         this.lastFacingTime = 0;
         this.isUsingTrought = false;
+        this.isEating = false;
     }
 
     update(dt, player, world, sheepList, trought) {
@@ -42,6 +43,8 @@ export class Sheep {
         this.hunger += dt * 0.75;
         if (this.thirst > 120) this.thirst = 120;
         if (this.hunger > 120) this.hunger = 120;
+
+        this.isEating = false; // Reset each frame
 
         // Check Death
         if (this.thirst > 100 || this.hunger > 100) {
@@ -79,6 +82,7 @@ export class Sheep {
             if (consumed > 0) {
                 this.hunger -= dt * 25;
                 if (this.hunger < 0) this.hunger = 0;
+                this.isEating = true;
             }
         }
 
@@ -209,6 +213,16 @@ export class Sheep {
         this.y += moveY * speed * dt;
 
         return null;
+    }
+
+    isVisible(camera, canvasWidth, canvasHeight) {
+        const margin = 50; // Buffer
+        return (
+            this.x >= camera.x - margin &&
+            this.x <= camera.x + canvasWidth + margin &&
+            this.y >= camera.y - margin &&
+            this.y <= camera.y + canvasHeight + margin
+        );
     }
 
     draw(ctx) {

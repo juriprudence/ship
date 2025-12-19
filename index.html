@@ -284,6 +284,33 @@
             background: #45a049;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
         }
+
+        .sound-toggle-container {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            font-size: 1.2rem;
+            color: #deb887;
+            cursor: pointer;
+            user-select: none;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 20px;
+            border-radius: 12px;
+            transition: background 0.3s;
+        }
+
+        .sound-toggle-container:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sound-toggle-container input {
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            accent-color: #ffd700;
+        }
     </style>
 </head>
 
@@ -332,6 +359,10 @@
                     <li><span>الهدف:</span> حافظ على قطيعك لأطول فترة ممكنة! ⏳</li>
                 </ul>
                 <button class="start-btn" id="start-game-btn">ابدأ المغامرة 🚀</button>
+                <div class="sound-toggle-container" id="sound-toggle-wrap">
+                    <label for="sound-checkbox">تفعيل الصوت 🔊</label>
+                    <input type="checkbox" id="sound-checkbox" checked>
+                </div>
             </div>
         </div>
     </div>

@@ -3,13 +3,16 @@ import { drawEmoji } from './Utils.js';
 const sheepImages = {
     down: new Image(),
     up: new Image(),
-    left: new Image(),
-    right: new Image()
+    right: new Image(),
+    walk: [new Image(), new Image(), new Image(), new Image()] // 4 frames for walk animation
 };
 sheepImages.down.src = 'images/sheep/down.png';
 sheepImages.up.src = 'images/sheep/up.png';
-sheepImages.left.src = 'images/sheep/left.png';
 sheepImages.right.src = 'images/sheep/right.png';
+sheepImages.walk[0].src = 'images/sheep/left.png';    // Frame 0
+sheepImages.walk[1].src = 'images/sheep/walk_1.png';  // Frame 1
+sheepImages.walk[2].src = 'images/sheep/walk_2.png';  // Frame 2
+sheepImages.walk[3].src = 'images/sheep/walk_3.png';  // Frame 3
 
 export class Sheep {
     constructor(playerX, playerY) {
@@ -32,6 +35,10 @@ export class Sheep {
         this.lastFacingTime = 0;
         this.isUsingTrought = false;
         this.isEating = false;
+
+        // Animation state
+        this.animationTimer = 0;
+        this.animationFrame = 0;
     }
 
     update(dt, player, world, sheepList, trought) {
@@ -212,6 +219,21 @@ export class Sheep {
         this.x += moveX * speed * dt;
         this.y += moveY * speed * dt;
 
+        // Update animation with ping-pong sequence for realistic walk
+        const isMoving = Math.abs(moveX) > 0.1 || Math.abs(moveY) > 0.1;
+        const walkSequence = [0, 1, 2, 3, 2, 1]; // Ping-pong with 4 frames: 0→1→2→3→2→1→0
+
+        if (isMoving) {
+            this.animationTimer += dt * 6; // Slower animation speed for more natural pacing
+            if (this.animationTimer > 0.8) { // Faster frame transitions
+                this.animationFrame = (this.animationFrame + 1) % walkSequence.length;
+                this.animationTimer = 0;
+            }
+        } else {
+            this.animationFrame = 0;
+            this.animationTimer = 0;
+        }
+
         return null;
     }
 
@@ -242,9 +264,26 @@ export class Sheep {
         }
 
         // Draw Sprite
-        const img = sheepImages[this.facing];
+        let img = sheepImages[this.facing];
+        let flip = false;
+
+        // Use animation for left/right with ping-pong sequence
+        if (this.facing === 'left' || this.facing === 'right') {
+            const walkSequence = [0, 1, 2, 3, 2, 1]; // Match the sequence from update()
+            img = sheepImages.walk[walkSequence[this.animationFrame]];
+            if (this.facing === 'left') flip = true;
+        }
+
         if (img && img.complete) {
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+            if (flip) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(-1, 1);
+                ctx.drawImage(img, -this.width / 2, -this.height / 2, this.width, this.height);
+                ctx.restore();
+            } else {
+                ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+            }
         } else {
             // Fallback if image not loaded yet
             drawEmoji(ctx, this.x, this.y, '🐑', 24);

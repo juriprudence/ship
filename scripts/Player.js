@@ -12,10 +12,10 @@ export class Player {
         this.actionRange = 60;
 
         this.sprite = new Image();
-        this.sprite.src = 'images/player.png';
+        this.sprite.src = 'images/newplayer/player1.png';
 
         this.sprite2 = new Image();
-        this.sprite2.src = 'images/player2.png';
+        this.sprite2.src = 'images/newplayer/player2.png';
 
         this.animationTimer = 0;
         this.animationFrame = 0; // 0 or 1
@@ -88,12 +88,13 @@ export class Player {
 
         let col = 0;
         let row = 0;
+        let flipHorizontal = false;
 
         switch (this.direction) {
             case 0: col = 0; row = 0; break; // Back
             case 1: col = 1; row = 0; break; // Front
-            case 2: col = 1; row = 1; break; // Left (Swapped)
-            case 3: col = 0; row = 1; break; // Right (Swapped)
+            case 2: col = 0; row = 1; flipHorizontal = true; break; // Left (flipped right)
+            case 3: col = 0; row = 1; break; // Right
         }
 
         const screenHeight = 80;
@@ -108,13 +109,30 @@ export class Player {
         if (this.sprite.complete && this.sprite2.complete) {
             const currentSprite = this.animationFrame === 0 ? this.sprite : this.sprite2;
 
-            ctx.drawImage(
-                currentSprite,
-                col * this.frameWidth, row * this.frameHeight,
-                this.frameWidth, this.frameHeight,
-                this.x - screenWidth / 2, this.y - screenHeight + yOffset, // Anchor at feet
-                screenWidth, screenHeight
-            );
+            ctx.save();
+
+            if (flipHorizontal) {
+                // Flip horizontally for right direction
+                ctx.translate(this.x + screenWidth / 2, this.y - screenHeight + yOffset);
+                ctx.scale(-1, 1);
+                ctx.drawImage(
+                    currentSprite,
+                    col * this.frameWidth, row * this.frameHeight,
+                    this.frameWidth, this.frameHeight,
+                    0, 0,
+                    screenWidth, screenHeight
+                );
+            } else {
+                ctx.drawImage(
+                    currentSprite,
+                    col * this.frameWidth, row * this.frameHeight,
+                    this.frameWidth, this.frameHeight,
+                    this.x - screenWidth / 2, this.y - screenHeight + yOffset,
+                    screenWidth, screenHeight
+                );
+            }
+
+            ctx.restore();
         } else {
             // Fallback while loading
             drawEmoji(ctx, this.x, this.y, '👳', 32);

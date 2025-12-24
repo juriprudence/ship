@@ -9,6 +9,11 @@ export class SoundManager {
 
         // Pre-load footstep sound
         this.footstepSound = new Audio('sounds/footsteps.mp3');
+
+        // Pre-load scissor sound
+        this.scissorSound = new Audio('sounds/scissors_cutting.mp3');
+        this.scissorSound.loop = true;
+        this.isShearingPlaying = false;
     }
 
     setSoundEnabled(enabled) {
@@ -67,5 +72,20 @@ export class SoundManager {
         const step = this.footstepSound.cloneNode();
         step.volume = 0.4; // Slightly quieter for footsteps
         step.play().catch(e => { });
+    }
+
+    startShearingSound() {
+        if (!this.canPlay()) return;
+        if (this.isShearingPlaying) return;
+
+        this.scissorSound.currentTime = 0;
+        this.scissorSound.play().catch(e => console.log(e));
+        this.isShearingPlaying = true;
+    }
+
+    stopShearingSound() {
+        this.scissorSound.pause();
+        this.scissorSound.currentTime = 0;
+        this.isShearingPlaying = false;
     }
 }

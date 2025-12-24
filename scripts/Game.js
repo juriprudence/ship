@@ -262,11 +262,19 @@ export class Game {
         this.soundManager.playEffect('shear_the_wool');
         this.createParticleVFX(sheep.x, sheep.y, '#fff', 10);
         this.showNotification("توجه إلى الخروف لجمع الذهب! 🚶‍♂️");
+
+        // Stop sheep movement
+        sheep.isBeingSheared = true;
     }
 
     cancelExtraction(message) {
+        if (this.extractionState.sheep) {
+            this.extractionState.sheep.isBeingSheared = false;
+        }
+        this.soundManager.stopShearingSound();
         this.extractionState.active = false;
         this.extractionState.sheep = null;
+        this.player.isShearing = false;
         if (message) this.showNotification(message);
     }
 
@@ -275,8 +283,13 @@ export class Game {
         this.gameState.gold += 10;
         this.showNotification("+10 ذهب 🪙");
         this.updateUI();
+        if (this.extractionState.sheep) {
+            this.extractionState.sheep.isBeingSheared = false;
+        }
+        this.soundManager.stopShearingSound();
         this.extractionState.active = false;
         this.extractionState.sheep = null;
+        this.player.isShearing = false;
     }
 
     shearSheep(sheep) {
@@ -418,6 +431,9 @@ export class Game {
                 if (!this.extractionState.hasReached) {
                     this.extractionState.hasReached = true;
                     this.showNotification("جاري جمع الذهب... اثبت مكانك! ⏳");
+                    console.log('DEBUG: Entering Shearing State');
+                    this.player.isShearing = true;
+                    this.soundManager.startShearingSound();
                 }
                 this.extractionState.timer += dt;
 

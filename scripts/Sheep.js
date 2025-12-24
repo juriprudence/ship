@@ -132,7 +132,12 @@ export class Sheep {
         const perceptionRadius = 400;
 
         // Trought Priority
-        if (this.isUsingTrought && inTrought) {
+        if (this.isBeingSheared) {
+            speed = 0;
+            moveX = 0;
+            moveY = 0;
+            // Ensure it faces player or stays as is? Stays as is is fine.
+        } else if (this.isUsingTrought && inTrought) {
             // Stay at the trought while using it
             const angle = Math.atan2(trought.y - this.y, trought.x - this.x);
             moveX = Math.cos(angle) * 0.2;

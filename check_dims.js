@@ -17,3 +17,9 @@ const oldP = getDimensions('d:/xml/kharof/images/player.png');
 console.log('New Player 1:', p1);
 console.log('New Player 2:', p2);
 console.log('Old Player:', oldP);
+
+const cis = getDimensions('d:/xml/kharof/images/playercis.png');
+console.log('Player Cis:', cis);
+
+const cis2 = getDimensions('d:/xml/kharof/images/playercis2.png');
+console.log('Player Cis 2:', cis2);

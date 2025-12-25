@@ -125,7 +125,7 @@ export class Game {
         document.getElementById('start-screen').style.display = 'none';
 
         // Initial Spawn
-        for (let i = 0; i < 20; i++) this.spawnSheep();
+        for (let i = 0; i < 3; i++) this.spawnSheep();
 
         requestAnimationFrame(this.gameLoop);
     }
@@ -378,7 +378,7 @@ export class Game {
         document.getElementById('game-over').style.display = 'none';
 
         // Spawn Initial Sheep
-        for (let i = 0; i < 20; i++) this.spawnSheep();
+        for (let i = 0; i < 3; i++) this.spawnSheep();
 
         this.updateUI();
 

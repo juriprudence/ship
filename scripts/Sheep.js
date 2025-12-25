@@ -46,8 +46,8 @@ export class Sheep {
         if (this.woolGrowth < 100) this.woolGrowth += dt * 5;
 
         // 2. Thirst & Hunger
-        this.thirst += dt * 1.0;
-        this.hunger += dt * 0.75;
+        this.thirst += dt * 0.5;
+        this.hunger += dt * 0.5;
         if (this.thirst > 120) this.thirst = 120;
         if (this.hunger > 120) this.hunger = 120;
 

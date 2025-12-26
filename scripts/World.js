@@ -1,22 +1,13 @@
 import { drawEmoji } from './Utils.js';
-import { Grassland } from './Grassland.js';
 import { TileMap } from './TileMap.js';
+
 
 export class World {
     constructor() {
         this.oasis = { x: 400, y: 300, radius: 100 };
         this.tent = { x: -300, y: -200, radius: 60, width: 120, height: 100 };
 
-        // Multiple Grassland patches
-        this.grasslands = [];
-        for (let i = 0; i < 7; i++) {
-            // Initial distribution around the starting area
-            const angle = (i / 7) * Math.PI * 2;
-            const dist = 400 + Math.random() * 300;
-            const x = Math.cos(angle) * dist;
-            const y = Math.sin(angle) * dist;
-            this.grasslands.push(new Grassland(x, y));
-        }
+
 
         this.palms = [];
         this.cacti = [];
@@ -60,13 +51,7 @@ export class World {
     }
 
     update(dt, playerX, playerY, day) {
-        let anyRespawned = false;
-        this.grasslands.forEach(g => {
-            if (g.update(dt, playerX, playerY, day)) {
-                anyRespawned = true;
-            }
-        });
-        return { respawned: anyRespawned };
+        return { respawned: false };
     }
 
     draw(ctx, camera, canvasWidth, canvasHeight) {
@@ -103,8 +88,7 @@ export class World {
         ctx.lineWidth = 10;
         ctx.stroke();
 
-        // Draw Grasslands
-        this.grasslands.forEach(g => g.draw(ctx, this.tileset, 16));
+
 
         // Palms
         this.palms.forEach(p => {

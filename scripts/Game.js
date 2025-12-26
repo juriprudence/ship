@@ -62,8 +62,8 @@ export class Game {
         this.onPointerUp = this.onPointerUp.bind(this);
         this.buySheep = this.buySheep.bind(this);
         this.upgradeSpeed = this.upgradeSpeed.bind(this);
-        this.buyGrassland = this.buyGrassland.bind(this);
         this.restartGame = this.restartGame.bind(this);
+
         this.confirmPurchase = this.confirmPurchase.bind(this);
         this.cancelPurchase = this.cancelPurchase.bind(this);
         this.startGame = this.startGame.bind(this);
@@ -83,7 +83,7 @@ export class Game {
         // Bind UI buttons
         document.getElementById('buy-sheep-btn').addEventListener('click', this.buySheep);
         document.getElementById('upgrade-speed-btn').addEventListener('click', this.upgradeSpeed);
-        document.getElementById('buy-grassland-btn').addEventListener('click', this.buyGrassland);
+
         document.getElementById('confirm-purchase').addEventListener('click', this.confirmPurchase);
         document.getElementById('cancel-purchase').addEventListener('click', this.cancelPurchase);
         document.getElementById('start-game-btn').addEventListener('click', this.startGame);
@@ -316,27 +316,7 @@ export class Game {
         this.updateUI();
     }
 
-    buyGrassland() {
-        if (this.gameState.gold >= 500) {
-            this.placementMode = 'grassland';
-            this.toggleShop(false);
-            this.showNotification("اختر مكاناً لزراعة العشب! 🌿");
-        }
-        this.updateUI();
-    }
 
-    placeGrassland(x, y) {
-        if (this.gameState.gold >= 500) {
-            this.gameState.gold -= 500;
-            import('./Grassland.js').then(m => {
-                this.world.grasslands.push(new m.Grassland(x, y));
-            });
-            this.createParticleVFX(x, y, '#6ab04c', 20);
-            this.showNotification("تمت زراعة العشب! 🌿");
-            this.placementMode = null;
-            this.updateUI();
-        }
-    }
 
     confirmPurchase() {
         if (this.gameState.gold >= 100 && this.pendingPurchasePos) {
@@ -524,19 +504,7 @@ export class Game {
         this.sheepList.forEach(s => s.draw(this.ctx));
         this.player.draw(this.ctx, this.gameState.time);
 
-        // Placement Ghost
-        if (this.placementMode === 'grassland') {
-            this.ctx.globalAlpha = 0.5;
-            this.ctx.fillStyle = '#6ab04c';
-            this.ctx.beginPath();
-            this.ctx.arc(this.mousePos.x, this.mousePos.y, 80, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.font = '50px serif';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText('🌿', this.mousePos.x, this.mousePos.y);
-            this.ctx.globalAlpha = 1.0;
-        }
+
 
         // Extraction Progress Bar
         if (this.extractionState.active) {
@@ -615,11 +583,9 @@ export class Game {
 
         // Update Shop Buttons
         const buyBtn = document.getElementById('buy-sheep-btn');
-        const buyGrasslandBtn = document.getElementById('buy-grassland-btn');
         const upgradeBtn = document.getElementById('upgrade-speed-btn');
 
         if (buyBtn) buyBtn.disabled = this.gameState.gold < 100;
-        if (buyGrasslandBtn) buyGrasslandBtn.disabled = this.gameState.gold < 500;
         if (upgradeBtn && upgradeBtn.textContent !== "السرعة القصوى") {
             upgradeBtn.disabled = this.gameState.gold < 100;
         }

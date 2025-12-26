@@ -77,6 +77,7 @@ export class Sheep {
         const inOasis = distToOasis < world.oasis.radius;
 
         const inMapWater = world.tileMap ? world.tileMap.isPositionInLayer(this.x, this.y, 'water') : false;
+        const inMapGrass = world.tileMap ? world.tileMap.isPositionInLayer(this.x, this.y, 'grass') : false;
 
         const distToTrought = trought ? Math.hypot(this.x - trought.x, this.y - trought.y) : Infinity;
         const inTrought = distToTrought < 50 && trought && trought.isTransformed;
@@ -93,6 +94,12 @@ export class Sheep {
                 if (this.hunger < 0) this.hunger = 0;
                 this.isEating = true;
             }
+        }
+
+        if (inMapGrass) {
+            this.hunger -= dt * 25;
+            if (this.hunger < 0) this.hunger = 0;
+            this.isEating = true;
         }
 
         if (inTrought) {
@@ -182,11 +189,35 @@ export class Sheep {
                 moveY = Math.sin(angle);
                 speed = 60;
             }
-        } else if (this.hunger > 70 && nearestGrass && !inGrassland && minDistToGrass < perceptionRadius) {
-            const angle = Math.atan2(nearestGrass.y - this.y, nearestGrass.x - this.x);
-            moveX = Math.cos(angle);
-            moveY = Math.sin(angle);
-            speed = 60;
+        } else if (this.hunger > 70 && !inGrassland && !inMapGrass) {
+            // Find nearest food source
+            let targetFood = null;
+            let bestFoodDist = Infinity;
+
+            // Check Grasslands
+            if (nearestGrass && minDistToGrass < perceptionRadius) {
+                targetFood = nearestGrass;
+                bestFoodDist = minDistToGrass;
+            }
+
+            // Check Map Grass
+            if (world.tileMap) {
+                const nearestTile = world.tileMap.getNearestTileInLayer(this.x, this.y, 'grass');
+                if (nearestTile) {
+                    const distToTile = Math.hypot(this.x - nearestTile.x, this.y - nearestTile.y);
+                    if (distToTile < perceptionRadius && distToTile < bestFoodDist) {
+                        targetFood = nearestTile;
+                        bestFoodDist = distToTile;
+                    }
+                }
+            }
+
+            if (targetFood) {
+                const angle = Math.atan2(targetFood.y - this.y, targetFood.x - this.x);
+                moveX = Math.cos(angle);
+                moveY = Math.sin(angle);
+                speed = 60;
+            }
         } else if (distToPlayer < 150) {
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
             if (distToPlayer > 50) {

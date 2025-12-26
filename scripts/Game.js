@@ -413,7 +413,7 @@ export class Game {
             );
         }
 
-        this.player.update(dt, this.soundManager);
+        this.player.update(dt, this.soundManager, this.world);
         this.trought.update(dt);
 
         // Extraction Logic

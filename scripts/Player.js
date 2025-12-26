@@ -37,7 +37,7 @@ export class Player {
         this.direction = 1;
     }
 
-    update(dt, soundManager) {
+    update(dt, soundManager, world) {
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -45,9 +45,21 @@ export class Player {
         if (dist > 5) {
             const moveX = (dx / dist) * this.speed * dt;
             const moveY = (dy / dist) * this.speed * dt;
-            this.x += moveX;
-            this.y += moveY;
-            this.isMoving = true;
+
+            // Collision detection
+            const nextX = this.x + moveX;
+            const nextY = this.y + moveY;
+
+            if (world && world.tileMap && world.tileMap.isCollision(nextX, nextY)) {
+                // Try sliding (optional but good for UX) - for now just block
+                this.isMoving = false;
+                this.targetX = this.x;
+                this.targetY = this.y;
+            } else {
+                this.x = nextX;
+                this.y = nextY;
+                this.isMoving = true;
+            }
 
             // Determine direction
             if (Math.abs(dx) > Math.abs(dy)) {

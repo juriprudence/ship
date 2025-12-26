@@ -76,10 +76,12 @@ export class Sheep {
         const distToOasis = Math.hypot(this.x - world.oasis.x, this.y - world.oasis.y);
         const inOasis = distToOasis < world.oasis.radius;
 
+        const inMapWater = world.tileMap ? world.tileMap.isPositionInLayer(this.x, this.y, 'water') : false;
+
         const distToTrought = trought ? Math.hypot(this.x - trought.x, this.y - trought.y) : Infinity;
         const inTrought = distToTrought < 50 && trought && trought.isTransformed;
 
-        if (inOasis) {
+        if (inOasis || inMapWater) {
             this.thirst -= dt * 30;
             if (this.thirst < 0) this.thirst = 0;
         }
@@ -151,11 +153,35 @@ export class Sheep {
         } else if (this.isUsingTrought) {
             // If somehow using it but none of the above (shouldn't happen but for safety)
             speed = 0;
-        } else if (this.thirst > 70 && !inOasis && distToOasis < perceptionRadius) {
-            const angle = Math.atan2(world.oasis.y - this.y, world.oasis.x - this.x);
-            moveX = Math.cos(angle);
-            moveY = Math.sin(angle);
-            speed = 60;
+        } else if (this.thirst > 70 && !inOasis && !inMapWater) {
+            // Find nearest water source
+            let targetWater = null;
+            let bestWaterDist = Infinity;
+
+            // Check Oasis
+            if (distToOasis < perceptionRadius) {
+                targetWater = { x: world.oasis.x, y: world.oasis.y };
+                bestWaterDist = distToOasis;
+            }
+
+            // Check Map Water
+            if (world.tileMap) {
+                const nearestTile = world.tileMap.getNearestTileInLayer(this.x, this.y, 'water');
+                if (nearestTile) {
+                    const distToTile = Math.hypot(this.x - nearestTile.x, this.y - nearestTile.y);
+                    if (distToTile < perceptionRadius && distToTile < bestWaterDist) {
+                        targetWater = nearestTile;
+                        bestWaterDist = distToTile;
+                    }
+                }
+            }
+
+            if (targetWater) {
+                const angle = Math.atan2(targetWater.y - this.y, targetWater.x - this.x);
+                moveX = Math.cos(angle);
+                moveY = Math.sin(angle);
+                speed = 60;
+            }
         } else if (this.hunger > 70 && nearestGrass && !inGrassland && minDistToGrass < perceptionRadius) {
             const angle = Math.atan2(nearestGrass.y - this.y, nearestGrass.x - this.x);
             moveX = Math.cos(angle);
@@ -221,8 +247,16 @@ export class Sheep {
             }
         }
 
-        this.x += moveX * speed * dt;
-        this.y += moveY * speed * dt;
+        const nextX = this.x + moveX * speed * dt;
+        const nextY = this.y + moveY * speed * dt;
+
+        if (world && world.tileMap && world.tileMap.isCollision(nextX, nextY)) {
+            // Blocked, maybe change wander angle for better AI feel
+            if (Math.random() < 0.1) this.wanderAngle = Math.random() * Math.PI * 2;
+        } else {
+            this.x = nextX;
+            this.y = nextY;
+        }
 
         // Update animation with ping-pong sequence for realistic walk
         const isMoving = Math.abs(moveX) > 0.1 || Math.abs(moveY) > 0.1;

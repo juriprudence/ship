@@ -4,7 +4,8 @@ const sheepImages = {
     down: new Image(),
     up: new Image(),
     right: new Image(),
-    walk: [new Image(), new Image(), new Image(), new Image()] // 4 frames for walk animation
+    walk: [new Image(), new Image(), new Image(), new Image()], // 4 frames for walk animation
+    eat: [new Image(), new Image()] // 2 frames for eating/drinking animation
 };
 sheepImages.down.src = 'images/sheep/down.png';
 sheepImages.up.src = 'images/sheep/up.png';
@@ -13,6 +14,9 @@ sheepImages.walk[0].src = 'images/sheep/left.png';    // Frame 0
 sheepImages.walk[1].src = 'images/sheep/walk_1.png';  // Frame 1
 sheepImages.walk[2].src = 'images/sheep/walk_2.png';  // Frame 2
 sheepImages.walk[3].src = 'images/sheep/walk_3.png';  // Frame 3
+
+sheepImages.eat[0].src = 'images/sheep/head_down/eat (1).png';
+sheepImages.eat[1].src = 'images/sheep/head_down/eat (2).png';
 
 export class Sheep {
     constructor(playerX, playerY) {
@@ -62,7 +66,6 @@ export class Sheep {
 
         // --- Interactions ---
 
-
         const distToOasis = Math.hypot(this.x - world.oasis.x, this.y - world.oasis.y);
         const inOasis = distToOasis < world.oasis.radius;
 
@@ -75,6 +78,7 @@ export class Sheep {
         if (inOasis || inMapWater) {
             this.thirst -= dt * 30;
             if (this.thirst < 0) this.thirst = 0;
+            this.isEating = true; // Use head-down animation for drinking
         }
 
 
@@ -96,6 +100,7 @@ export class Sheep {
                 this.hunger -= dt * 35;
                 if (this.thirst < 0) this.thirst = 0;
                 if (this.hunger < 0) this.hunger = 0;
+                this.isEating = true; // Use head-down animation
 
                 // Release slot if no longer needed
                 if (this.thirst === 0 && this.hunger === 0) {
@@ -268,13 +273,19 @@ export class Sheep {
             this.y = nextY;
         }
 
-        // Update animation with ping-pong sequence for realistic walk
+        // Update animation
         const isMoving = Math.abs(moveX) > 0.1 || Math.abs(moveY) > 0.1;
-        const walkSequence = [0, 1, 2, 3, 2, 1]; // Ping-pong with 4 frames: 0→1→2→3→2→1→0
 
-        if (isMoving) {
-            this.animationTimer += dt * 6; // Slower animation speed for more natural pacing
-            if (this.animationTimer > 0.8) { // Faster frame transitions
+        if (this.isEating) {
+            this.animationTimer += dt * 5; // Eating animation speed
+            if (this.animationTimer > 0.5) {
+                this.animationFrame = (this.animationFrame + 1) % 2; // 2 frames for eating
+                this.animationTimer = 0;
+            }
+        } else if (isMoving) {
+            const walkSequence = [0, 1, 2, 3, 2, 1]; // Ping-pong with 4 frames
+            this.animationTimer += dt * 6;
+            if (this.animationTimer > 0.8) {
                 this.animationFrame = (this.animationFrame + 1) % walkSequence.length;
                 this.animationTimer = 0;
             }
@@ -316,10 +327,14 @@ export class Sheep {
         let img = sheepImages[this.facing];
         let flip = false;
 
-        // Use animation for left/right with ping-pong sequence
-        if (this.facing === 'left' || this.facing === 'right') {
+        if (this.isEating) {
+            img = sheepImages.eat[this.animationFrame % 2];
+            // Potentially flip if we want it to maintain its last horizontal facing?
+            // Usually eating sprites are head-down, so horizontal facing matters less but flip might be needed if they are asymmetric.
+            if (this.facing === 'left') flip = true;
+        } else if (this.facing === 'left' || this.facing === 'right') {
             const walkSequence = [0, 1, 2, 3, 2, 1]; // Match the sequence from update()
-            img = sheepImages.walk[walkSequence[this.animationFrame]];
+            img = sheepImages.walk[walkSequence[this.animationFrame % walkSequence.length]];
             if (this.facing === 'left') flip = true;
         }
 

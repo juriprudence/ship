@@ -88,8 +88,8 @@ export class TileMap {
 
             layer.tiles.forEach(tile => {
                 const id = parseInt(tile.id);
-                const destX = startX + tile.x * scaledTileSize;
-                const destY = startY + tile.y * scaledTileSize;
+                const destX = Math.floor(startX + tile.x * scaledTileSize);
+                const destY = Math.floor(startY + tile.y * scaledTileSize);
 
                 // Simple camera culling
                 if (destX + scaledTileSize < camera.x || destX > camera.x + ctx.canvas.width ||
@@ -103,7 +103,7 @@ export class TileMap {
                 ctx.drawImage(
                     this.tilesetImage,
                     srcX, srcY, this.baseTileSize, this.baseTileSize,
-                    destX, destY, scaledTileSize, scaledTileSize
+                    destX, destY, scaledTileSize + 1, scaledTileSize + 1
                 );
             });
         }

@@ -581,7 +581,7 @@ export class Game {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.ctx.save();
-        this.ctx.translate(-this.camera.x, -this.camera.y);
+        this.ctx.translate(-Math.floor(this.camera.x), -Math.floor(this.camera.y));
 
         this.world.draw(this.ctx, this.camera, this.canvas.width, this.canvas.height);
         this.trought.draw(this.ctx);

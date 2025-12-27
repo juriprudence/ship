@@ -280,13 +280,14 @@ export class Game {
             if (this.extractionState.active) {
                 this.cancelExtraction("تم إلغاء جمع الذهب بالنقر على الأرض! ❌");
             }
-            this.player.handleInput(clickX, clickY);
+            // Project click target further (1.5x)
+            const dx = clickX - this.player.x;
+            const dy = clickY - this.player.y;
+            this.player.handleInput(this.player.x + dx * 1.5, this.player.y + dy * 1.5);
             this.createRippleVFX(clickX, clickY);
         } else {
-            // Drag finished, stop player
-            this.player.targetX = this.player.x;
-            this.player.targetY = this.player.y;
-            this.player.isMoving = false;
+            // Drag finished, let player continue to the projected target
+            // No reset here
         }
 
         this.pointer.isDown = false;
@@ -440,7 +441,7 @@ export class Game {
             const dx = this.mousePos.x - this.pointer.startX;
             const dy = this.mousePos.y - this.pointer.startY;
             const angle = Math.atan2(dy, dx);
-            const targetDist = 100;
+            const targetDist = 300; // Increased from 100
 
             this.player.handleInput(
                 this.player.x + Math.cos(angle) * targetDist,
@@ -530,11 +531,21 @@ export class Game {
 
         // Wolf Logic
         this.wolfList.forEach(w => {
-            const event = w.update(dt, this.sheepList, this.world);
-            if (event && event.kill) {
-                this.showNotification(event.message + "! 🐺");
-                this.soundManager.playEffect('daying_sheep');
-                this.updateUI();
+            const event = w.update(dt, this.sheepList, this.world, this.wolfList, this.player);
+            if (event) {
+                if (event.kill) {
+                    this.showNotification(event.message + "! 🐺");
+                    this.soundManager.playEffect('daying_sheep');
+                    this.updateUI();
+                } else if (event.hit) {
+                    // Small hit feedback
+                    this.soundManager.playEffect('hit');
+                    // Find target sheep to spawn particles (wolf current target is nearest)
+                    const target = this.sheepList.find(s => Math.hypot(w.x - s.x, w.y - s.y) < 50);
+                    if (target) {
+                        this.createParticleVFX(target.x, target.y, '#f00', 5);
+                    }
+                }
             }
         });
 

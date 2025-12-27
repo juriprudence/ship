@@ -39,6 +39,8 @@ export class Sheep {
         // Animation state
         this.animationTimer = 0;
         this.animationFrame = 0;
+
+        this.wolfHits = 0; // Hits taken from wolf
     }
 
     update(dt, player, world, sheepList, trought) {

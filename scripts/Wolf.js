@@ -22,6 +22,7 @@ export class Wolf {
         this.health = 2;
         this.fleeTimer = 0;
         this.fleeSource = { x: 0, y: 0 };
+        this.attackCooldown = 0;
     }
 
     flee(sourceX, sourceY) {
@@ -30,8 +31,21 @@ export class Wolf {
         this.fleeSource = { x: sourceX, y: sourceY };
     }
 
-    update(dt, sheepList, world) {
+    update(dt, sheepList, world, wolfList, player) {
         if (sheepList.length === 0) return;
+
+        // Pack Detection
+        let nearbyWolves = 0;
+        wolfList.forEach(w => {
+            if (w === this) return;
+            const d = Math.hypot(this.x - w.x, this.y - w.y);
+            if (d < 300) nearbyWolves++;
+        });
+        const inPack = (nearbyWolves >= 2); // 3 wolves including self
+
+        // Player Distance Check
+        const distToPlayer = Math.hypot(this.x - player.x, this.y - player.y);
+        const playerIsNear = distToPlayer < 250;
 
         // Find nearest sheep
         let nearestSheep = null;
@@ -57,9 +71,17 @@ export class Wolf {
 
         const isIsolated = othersNearTarget === 0;
 
+        // Decision Logic
         let moveX = 0;
         let moveY = 0;
         let currentSpeed = this.speed;
+
+        if (this.attackCooldown > 0) this.attackCooldown -= dt;
+
+        // Flee from player if alone
+        if (playerIsNear && !inPack && this.state !== 'flee') {
+            this.flee(player.x, player.y);
+        }
 
         if (this.state === 'flee') {
             this.fleeTimer -= dt;
@@ -71,7 +93,7 @@ export class Wolf {
                 moveY = Math.sin(angle);
                 currentSpeed = 150; // Run away fast
             }
-        } else if (isIsolated) {
+        } else if (isIsolated || inPack) {
             this.state = 'attack';
             this.targetSheep = nearestSheep;
             const angle = Math.atan2(nearestSheep.y - this.y, nearestSheep.x - this.x);
@@ -79,12 +101,20 @@ export class Wolf {
             moveY = Math.sin(angle);
             currentSpeed = 80;
 
-            if (minDist < 30) {
-                // Kill logic
-                const index = sheepList.indexOf(nearestSheep);
-                if (index > -1) {
-                    sheepList.splice(index, 1);
-                    return { kill: true, message: "the wolf eat the sheep" };
+            if (minDist < 30 && this.attackCooldown <= 0) {
+                // Bite/Attack logic
+                nearestSheep.wolfHits++;
+                this.attackCooldown = 0.8; // Time between bites
+
+                // Notify world through Game.js return
+                if (nearestSheep.wolfHits >= 5) {
+                    const index = sheepList.indexOf(nearestSheep);
+                    if (index > -1) {
+                        sheepList.splice(index, 1);
+                        return { kill: true, message: "the wolf eat the sheep" };
+                    }
+                } else {
+                    return { hit: true };
                 }
             }
         } else {
@@ -107,19 +137,41 @@ export class Wolf {
             }
         }
 
-        // Update facing
-        this.facing = Math.abs(moveX) > Math.abs(moveY) ? (moveX > 0 ? 'right' : 'left') : (moveY > 0 ? 'down' : 'up');
+        // Smart Obstacle Avoidance (Steering)
+        let finalMoveX = moveX;
+        let finalMoveY = moveY;
 
-        // Collision check
-        const nextX = this.x + moveX * currentSpeed * dt;
-        const nextY = this.y + moveY * currentSpeed * dt;
+        if (world.tileMap && world.tileMap.isCollision(this.x + moveX * currentSpeed * dt, this.y + moveY * currentSpeed * dt)) {
+            const baseAngle = Math.atan2(moveY, moveX);
+            // Try offsets: +/- 45 deg, +/- 90 deg, +/- 135 deg
+            const testAngles = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, (3 * Math.PI) / 4, (-3 * Math.PI) / 4];
+            let foundPath = false;
 
-        if (world.tileMap && world.tileMap.isCollision(nextX, nextY)) {
-            // Simple bounce/stop
-        } else {
-            this.x = nextX;
-            this.y = nextY;
+            for (let offset of testAngles) {
+                const angle = baseAngle + offset;
+                const tx = Math.cos(angle);
+                const ty = Math.sin(angle);
+                if (!world.tileMap.isCollision(this.x + tx * currentSpeed * dt, this.y + ty * currentSpeed * dt)) {
+                    finalMoveX = tx;
+                    finalMoveY = ty;
+                    foundPath = true;
+                    break;
+                }
+            }
+
+            if (!foundPath) {
+                finalMoveX = 0;
+                finalMoveY = 0;
+            }
         }
+
+        // Update facing based on final direction
+        if (finalMoveX !== 0 || finalMoveY !== 0) {
+            this.facing = Math.abs(finalMoveX) > Math.abs(finalMoveY) ? (finalMoveX > 0 ? 'right' : 'left') : (finalMoveY > 0 ? 'down' : 'up');
+        }
+
+        this.x += finalMoveX * currentSpeed * dt;
+        this.y += finalMoveY * currentSpeed * dt;
 
         // Animation
         this.animationTimer += dt * (this.state === 'attack' ? 10 : 5);

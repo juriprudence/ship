@@ -19,6 +19,15 @@ export class Wolf {
         this.animationFrame = 0;
 
         this.targetSheep = null;
+        this.health = 2;
+        this.fleeTimer = 0;
+        this.fleeSource = { x: 0, y: 0 };
+    }
+
+    flee(sourceX, sourceY) {
+        this.state = 'flee';
+        this.fleeTimer = 2.0; // Flee for 2 seconds
+        this.fleeSource = { x: sourceX, y: sourceY };
     }
 
     update(dt, sheepList, world) {
@@ -52,7 +61,17 @@ export class Wolf {
         let moveY = 0;
         let currentSpeed = this.speed;
 
-        if (isIsolated) {
+        if (this.state === 'flee') {
+            this.fleeTimer -= dt;
+            if (this.fleeTimer <= 0) {
+                this.state = 'follow';
+            } else {
+                const angle = Math.atan2(this.y - this.fleeSource.y, this.x - this.fleeSource.x);
+                moveX = Math.cos(angle);
+                moveY = Math.sin(angle);
+                currentSpeed = 150; // Run away fast
+            }
+        } else if (isIsolated) {
             this.state = 'attack';
             this.targetSheep = nearestSheep;
             const angle = Math.atan2(nearestSheep.y - this.y, nearestSheep.x - this.x);

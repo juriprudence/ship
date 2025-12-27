@@ -23,8 +23,18 @@ export class Player {
         this.shearingSprite2 = new Image();
         this.shearingSprite2.src = 'images/playercis2.png';
 
+        this.attackSprite = new Image();
+        this.attackSprite.src = 'images/newplayer/playerhitow.png';
+
+        this.attackSprite2 = new Image(); // Frame 2 source if needed, but we'll use one sheet
+        this.attackSprite2.src = 'images/newplayer/playerhitone.png';
+
         this.isShearing = false;
         this.shearingFrame = 0; // 0 or 1 for shearing animation
+
+        this.isAttacking = false;
+        this.attackTimer = 0;
+        this.attackFrame = 0;
 
         this.animationTimer = 0;
         this.animationFrame = 0; // 0 or 1
@@ -35,6 +45,14 @@ export class Player {
 
         // 0: Back (Up), 1: Front (Down), 2: Left, 3: Right
         this.direction = 1;
+    }
+
+    attack() {
+        this.isAttacking = true;
+        this.attackTimer = 0;
+        this.attackFrame = 1; // Start at frame 2 (index 1)
+        this.attackDurationTotal = 0;
+        this.isMoving = false; // Stop moving when attacking
     }
 
     update(dt, soundManager, world) {
@@ -73,6 +91,24 @@ export class Player {
 
         // Animation logic
         this.animationTimer += dt;
+
+        if (this.isAttacking) {
+            this.animationTimer += dt;
+            this.attackDurationTotal += dt;
+
+            if (this.animationTimer > 0.1) {
+                // Sequence 2, 3, 4 (indices 1, 2, 3)
+                this.attackFrame++;
+                if (this.attackFrame > 3) this.attackFrame = 1;
+                this.animationTimer = 0;
+            }
+
+            if (this.attackDurationTotal > 0.4) {
+                this.isAttacking = false;
+                this.attackDurationTotal = 0;
+            }
+            return;
+        }
 
         if (this.isShearing) {
             if (this.animationTimer > 0.2) {
@@ -121,32 +157,28 @@ export class Player {
         let col = 0;
         let row = 0;
         let flipHorizontal = false;
+        let currentSprite = this.animationFrame === 0 ? this.sprite : this.sprite2;
 
         // Default dimensions
         let currentFrameWidth = this.frameWidth;
         let currentFrameHeight = this.frameHeight;
 
-        if (this.isShearing && this.shearingSprite.complete) {
-            // Shearing sprite overrides
+        if (this.isAttacking && this.attackSprite.complete) {
+            currentSprite = this.attackSprite;
+            currentFrameWidth = 250;
+            currentFrameHeight = 250;
+            col = this.attackFrame % 2;
+            row = Math.floor(this.attackFrame / 2);
+            if (this.direction === 2) flipHorizontal = true;
+        } else if (this.isShearing && (this.shearingSprite.complete || this.shearingSprite2.complete)) {
+            currentSprite = (this.shearingFrame === 0 && this.shearingSprite.complete) ? this.shearingSprite : this.shearingSprite2;
             currentFrameWidth = 500;
             currentFrameHeight = 500;
-            // Assume single frame, so col=0, row=0
             col = 0;
             row = 0;
-
-            // Still respect direction for flipping if needed?
-            // Let's assume the sprite faces right by default like the others?
-            // Or if it's a single front-facing image, maybe we don't flip?
-            // To be safe, let's flip for Left (Dir 2) just like normal walking
             if (this.direction === 2) flipHorizontal = true;
-
-            // User requested 1/4 size
-            // Normal screenHeight is 80. 1/4 is 20. But let's try 35 first as 20 is very small? 
-            // "show it small 1/4" -> I'll try 30.
-            // Wait, if I use 20 it might be what they asked.
-            // Let's use a scale multiplier on the calculated screen dimensions.
         } else {
-            // Normal sprite handling
+            // Normal walking sprite handling
             switch (this.direction) {
                 case 0: col = 0; row = 0; break; // Back
                 case 1: col = 1; row = 0; break; // Front
@@ -156,10 +188,8 @@ export class Player {
         }
 
         let screenHeight = 80; // Base height
-
-        if (this.isShearing && this.shearingSprite.complete) {
-            // User requested bigger than 1/2 (was 40), let's try 60 (3/4)
-            screenHeight = 60;
+        if ((this.isShearing || this.isAttacking) && currentSprite.complete) {
+            screenHeight = 60; // Slightly smaller/different for these actions
         }
 
         const scale = screenHeight / currentFrameHeight;
@@ -170,8 +200,7 @@ export class Player {
             yOffset = 40;
         }
 
-        if (this.isShearing && this.shearingSprite.complete) {
-            // Adjust offset for sprite size
+        if (this.isShearing || this.isAttacking) {
             yOffset = 25;
         }
 
@@ -179,35 +208,16 @@ export class Player {
         // If square (500x500), height=80 -> width=80.
         // Original was width ~53.
 
-        if (this.sprite.complete && this.sprite2.complete) {
-            let currentSprite = this.animationFrame === 0 ? this.sprite : this.sprite2;
-
-            if (this.isShearing) {
-                // debug
-                // console.log('DEBUG: Draw Shearing. Frame:', this.shearingFrame, 'Img1:', this.shearingSprite.complete, 'Img2:', this.shearingSprite2.complete);
-
-                if (this.shearingFrame === 0 && this.shearingSprite.complete) {
-                    currentSprite = this.shearingSprite;
-                } else if (this.shearingFrame === 1 && this.shearingSprite2.complete) {
-                    currentSprite = this.shearingSprite2;
-                } else if (this.shearingSprite.complete) {
-                    // Fallback to sprite 1 if sprite 2 not loaded
-                    currentSprite = this.shearingSprite;
-                }
-            }
-
+        if (currentSprite.complete) {
             ctx.save();
-
             if (flipHorizontal) {
-                // Flip horizontally
-                // Note: we need to adjust translation for correct pivoting
-                ctx.translate(this.x + screenWidth / 2, this.y - screenHeight + yOffset);
+                ctx.translate(this.x, this.y - screenHeight + yOffset);
                 ctx.scale(-1, 1);
                 ctx.drawImage(
                     currentSprite,
                     col * currentFrameWidth, row * currentFrameHeight,
                     currentFrameWidth, currentFrameHeight,
-                    0, 0,
+                    -screenWidth / 2, 0,
                     screenWidth, screenHeight
                 );
             } else {
@@ -219,7 +229,6 @@ export class Player {
                     screenWidth, screenHeight
                 );
             }
-
             ctx.restore();
         } else {
             // Fallback while loading

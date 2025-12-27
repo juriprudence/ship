@@ -53,6 +53,8 @@ export class Game {
             lastY: 0
         };
 
+        this.wolfRespawnQueue = [];
+
         this.bindMethods();
     }
 
@@ -171,6 +173,55 @@ export class Game {
             }
             this.pointer.isDown = false;
             return;
+        }
+
+        let clickedWolf = null;
+        for (let w of this.wolfList) {
+            const dx = w.x - clickX;
+            const dy = w.y - clickY;
+            if (dx * dx + dy * dy < 1600) { // 40px radius click detection
+                clickedWolf = w;
+                break;
+            }
+        }
+
+        if (clickedWolf) {
+            const dist = Math.hypot(this.player.x - clickedWolf.x, this.player.y - clickedWolf.y);
+            if (dist < this.player.actionRange) {
+                this.player.attack();
+                // Determine direction to face wolf
+                const dx = clickedWolf.x - this.player.x;
+                const dy = clickedWolf.y - this.player.y;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    this.player.direction = dx > 0 ? 3 : 2;
+                } else {
+                    this.player.direction = dy > 0 ? 1 : 0;
+                }
+
+                // Wolf Hit Logic
+                const index = this.wolfList.indexOf(clickedWolf);
+                if (index > -1) {
+                    clickedWolf.health--;
+                    if (clickedWolf.health > 0) {
+                        clickedWolf.flee(this.player.x, this.player.y);
+                        this.showNotification("هرب الذئب! 🐺💨");
+                        this.soundManager.playEffect('hit'); // Play hit sound
+                        this.createParticleVFX(clickedWolf.x, clickedWolf.y, '#f00', 10);
+                    } else {
+                        this.wolfList.splice(index, 1);
+                        this.showNotification("لقد قتلت الذئب! ⚔️");
+                        this.soundManager.playEffect('hit');
+                        this.createParticleVFX(clickedWolf.x, clickedWolf.y, '#f00', 20);
+
+                        // Add to respawn queue
+                        this.wolfRespawnQueue.push({ timer: 5 });
+                    }
+                }
+                this.pointer.isDown = false;
+                return;
+            } else {
+                this.showNotification("الذئب بعيد جداً! اقترب منه 🏃‍♂️");
+            }
         }
 
         let clickedSheep = false;
@@ -493,6 +544,15 @@ export class Game {
         // Game Over Check
         if (this.sheepList.length === 0 && this.gameState.gameActive) {
             this.triggerGameOver();
+        }
+
+        // Wolf Respawn Logic
+        for (let i = this.wolfRespawnQueue.length - 1; i >= 0; i--) {
+            this.wolfRespawnQueue[i].timer -= dt;
+            if (this.wolfRespawnQueue[i].timer <= 0) {
+                this.wolfList.push(new Wolf());
+                this.wolfRespawnQueue.splice(i, 1);
+            }
         }
 
         // Particles

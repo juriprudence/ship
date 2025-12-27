@@ -4,6 +4,7 @@ import { Sheep } from './Sheep.js';
 import { Particle, Ripple } from './Utils.js';
 import { Trought } from './Trought.js';
 import { SoundManager } from './SoundManager.js';
+import { Wolf } from './Wolf.js';
 
 export class Game {
     constructor() {
@@ -24,6 +25,7 @@ export class Game {
         this.world = new World();
         this.trought = new Trought(1); // Day 1 multiplier
         this.sheepList = [];
+        this.wolfList = [];
         this.MAX_SHEEP = 50;
 
         this.particles = [];
@@ -126,6 +128,7 @@ export class Game {
 
         // Initial Spawn
         for (let i = 0; i < 3; i++) this.spawnSheep();
+        for (let i = 0; i < 5; i++) this.wolfList.push(new Wolf());
 
         requestAnimationFrame(this.gameLoop);
     }
@@ -347,6 +350,7 @@ export class Game {
 
         // Reset Lists
         this.sheepList = [];
+        this.wolfList = [];
         this.particles = [];
         this.ripples = [];
 
@@ -473,6 +477,16 @@ export class Game {
         });
         this.sheepList = survivingSheep;
 
+        // Wolf Logic
+        this.wolfList.forEach(w => {
+            const event = w.update(dt, this.sheepList, this.world);
+            if (event && event.kill) {
+                this.showNotification(event.message + "! 🐺");
+                this.soundManager.playEffect('daying_sheep');
+                this.updateUI();
+            }
+        });
+
         // Update Sound
         this.soundManager.updateGrassEating(anyoneEatingOnScreen);
 
@@ -502,6 +516,7 @@ export class Game {
         this.trought.draw(this.ctx);
 
         this.sheepList.forEach(s => s.draw(this.ctx));
+        this.wolfList.forEach(w => w.draw(this.ctx));
         this.player.draw(this.ctx, this.gameState.time);
 
 

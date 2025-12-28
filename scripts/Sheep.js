@@ -45,6 +45,7 @@ export class Sheep {
         this.animationFrame = 0;
 
         this.wolfHits = 0; // Hits taken from wolf
+        this.isMoving = false;
     }
 
     update(dt, player, world, sheepList, trought) {
@@ -87,6 +88,14 @@ export class Sheep {
             this.hunger -= dt * 25;
             if (this.hunger < 0) this.hunger = 0;
             this.isEating = true;
+
+            // Start consuming the grass tile
+            if (world.tileMap) {
+                const tile = world.tileMap.getTileAt(this.x, this.y, 'grass');
+                if (tile) {
+                    world.tileMap.startConsuming('grass', tile.x, tile.y, 60.0); // 60 seconds of eating before it disappears
+                }
+            }
         }
 
         if (inTrought) {
@@ -274,7 +283,7 @@ export class Sheep {
         }
 
         // Update animation
-        const isMoving = Math.abs(moveX) > 0.1 || Math.abs(moveY) > 0.1;
+        this.isMoving = Math.abs(moveX) > 0.1 || Math.abs(moveY) > 0.1;
 
         if (this.isEating) {
             this.animationTimer += dt * 5; // Eating animation speed
@@ -282,7 +291,7 @@ export class Sheep {
                 this.animationFrame = (this.animationFrame + 1) % 2; // 2 frames for eating
                 this.animationTimer = 0;
             }
-        } else if (isMoving) {
+        } else if (this.isMoving) {
             const walkSequence = [0, 1, 2, 3, 2, 1]; // Ping-pong with 4 frames
             this.animationTimer += dt * 6;
             if (this.animationTimer > 0.8) {

@@ -51,6 +51,9 @@ export class World {
     }
 
     update(dt, playerX, playerY, day) {
+        if (this.tileMap) {
+            this.tileMap.update(dt);
+        }
         return { respawned: false };
     }
 

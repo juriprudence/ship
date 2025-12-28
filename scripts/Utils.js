@@ -46,12 +46,54 @@ export class Ripple {
     }
 
     draw(ctx) {
-        ctx.strokeStyle = 'white';
-        ctx.globalAlpha = Math.max(0, this.life);
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#8ED6FF';
+        ctx.lineWidth = 1;
+
+        ctx.globalAlpha = Math.max(0, this.life) * 0.8;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Secondary ring
+        if (this.radius > 5) {
+            ctx.globalAlpha = Math.max(0, this.life - 0.2) * 0.5;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
         ctx.globalAlpha = 1;
+    }
+}
+export class DustParticle {
+    constructor(x, y) {
+        this.x = x + (Math.random() - 0.5) * 10;
+        this.y = y + (Math.random() - 0.5) * 5;
+        this.vx = (Math.random() - 0.5) * 40;
+        this.vy = -Math.random() * 20 - 10; // Drifts upward
+        this.life = 0.8 + Math.random() * 0.4;
+        this.startLife = this.life;
+        this.size = 2 + Math.random() * 3;
+        // Dusty color palette: tan, sand, light gray
+        const colors = ['#d2b48c', '#e6c288', '#cdaa7d', '#bdb76b'];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += 20 * dt; // Slight "gravity" to slow the ascent or settle
+        this.vx *= 0.95; // Air resistance
+        this.life -= dt;
+    }
+
+    draw(ctx) {
+        const alpha = Math.max(0, this.life / this.startLife);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = alpha * 0.6; // Slightly transparent
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
     }
 }

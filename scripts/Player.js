@@ -45,6 +45,8 @@ export class Player {
 
         // 0: Back (Up), 1: Front (Down), 2: Left, 3: Right
         this.direction = 1;
+
+        this.onFootstep = null;
     }
 
     attack() {
@@ -125,6 +127,10 @@ export class Player {
                 // Play footstep sound on frame toggle
                 if (soundManager) {
                     soundManager.playFootstep();
+                }
+
+                if (this.onFootstep) {
+                    this.onFootstep(this.x, this.y);
                 }
             }
         } else {

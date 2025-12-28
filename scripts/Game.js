@@ -1,7 +1,7 @@
 import { Player } from './Player.js';
 import { World } from './World.js';
 import { Sheep } from './Sheep.js';
-import { Particle, Ripple } from './Utils.js';
+import { Particle, Ripple, DustParticle } from './Utils.js';
 import { Trought } from './Trought.js';
 import { SoundManager } from './SoundManager.js';
 import { Wolf } from './Wolf.js';
@@ -54,6 +54,19 @@ export class Game {
         };
 
         this.wolfRespawnQueue = [];
+
+        this.player.onFootstep = (x, y) => {
+            const inWater = (this.world.tileMap && this.world.tileMap.isPositionInLayer(x, y, 'water')) ||
+                (Math.hypot(x - this.world.oasis.x, y - this.world.oasis.y) < this.world.oasis.radius);
+
+            if (inWater) {
+                this.createRippleVFX(x, y);
+            } else {
+                for (let i = 0; i < 4; i++) {
+                    this.particles.push(new DustParticle(x, y + 10)); // Spawn at feet
+                }
+            }
+        };
 
         this.bindMethods();
     }
@@ -284,10 +297,20 @@ export class Game {
             const dx = clickX - this.player.x;
             const dy = clickY - this.player.y;
             this.player.handleInput(this.player.x + dx * 1.5, this.player.y + dy * 1.5);
-            this.createRippleVFX(clickX, clickY);
+            // Context-aware click VFX
+            const inWater = (this.world.tileMap && this.world.tileMap.isPositionInLayer(clickX, clickY, 'water')) ||
+                (Math.hypot(clickX - this.world.oasis.x, clickY - this.world.oasis.y) < this.world.oasis.radius);
+
+            if (inWater) {
+                this.createRippleVFX(clickX, clickY);
+            } else {
+                this.createParticleVFX(clickX, clickY, '#d2b48c', 5);
+            }
         } else {
-            // Drag finished, let player continue to the projected target
-            // No reset here
+            // Drag finished, stop player immediately
+            this.player.targetX = this.player.x;
+            this.player.targetY = this.player.y;
+            this.player.isMoving = false;
         }
 
         this.pointer.isDown = false;
@@ -440,8 +463,11 @@ export class Game {
         if (this.pointer.isDragging) {
             const dx = this.mousePos.x - this.pointer.startX;
             const dy = this.mousePos.y - this.pointer.startY;
+            const dragDist = Math.sqrt(dx * dx + dy * dy);
             const angle = Math.atan2(dy, dx);
-            const targetDist = 300; // Increased from 100
+
+            // Dynamic target distance that scales with drag intensity
+            const targetDist = 200 + dragDist * 2;
 
             this.player.handleInput(
                 this.player.x + Math.cos(angle) * targetDist,
@@ -524,6 +550,18 @@ export class Game {
                 survivingSheep.push(s);
                 if (s.isEating && s.isVisible(this.camera, this.canvas.width, this.canvas.height)) {
                     anyoneEatingOnScreen = true;
+                    // Spawn ripples occasionally while drinking
+                    if (Math.random() < 0.05) {
+                        this.createRippleVFX(s.x, s.y);
+                    }
+                }
+                // Spawn ripples while walking in water
+                if (s.isMoving && Math.random() < 0.1) {
+                    const inWater = (this.world.tileMap && this.world.tileMap.isPositionInLayer(s.x, s.y, 'water')) ||
+                        (Math.hypot(s.x - this.world.oasis.x, s.y - this.world.oasis.y) < this.world.oasis.radius);
+                    if (inWater) {
+                        this.createRippleVFX(s.x, s.y);
+                    }
                 }
             }
         });
@@ -532,6 +570,19 @@ export class Game {
         // Wolf Logic
         this.wolfList.forEach(w => {
             const event = w.update(dt, this.sheepList, this.world, this.wolfList, this.player);
+
+            // Wolf ripples
+            const isMoving = Math.abs(w.x - w.lastX || 0) > 0.1 || Math.abs(w.y - w.lastY || 0) > 0.1;
+            if (isMoving && Math.random() < 0.1) {
+                const inWater = (this.world.tileMap && this.world.tileMap.isPositionInLayer(w.x, w.y, 'water')) ||
+                    (Math.hypot(w.x - this.world.oasis.x, w.y - this.world.oasis.y) < this.world.oasis.radius);
+                if (inWater) {
+                    this.createRippleVFX(w.x, w.y);
+                }
+            }
+            w.lastX = w.x;
+            w.lastY = w.y;
+
             if (event) {
                 if (event.kill) {
                     this.showNotification(event.message + "! 🐺");

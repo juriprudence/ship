@@ -7,21 +7,39 @@ const sheepImages = {
     walk: [new Image(), new Image(), new Image(), new Image()], // 4 frames for walk animation
     eat: [new Image(), new Image()] // 2 frames for eating/drinking animation
 };
-sheepImages.down.src = 'images/sheep/down.png';
-sheepImages.up.src = 'images/sheep/up.png';
-sheepImages.right.src = 'images/sheep/right.png';
-sheepImages.walk[0].src = 'images/sheep/left.png';    // Frame 0
-sheepImages.walk[1].src = 'images/sheep/walk_1.png';  // Frame 1
-sheepImages.walk[2].src = 'images/sheep/walk_2.png';  // Frame 2
-sheepImages.walk[3].src = 'images/sheep/walk_3.png';  // Frame 3
 
-sheepImages.eat[0].src = 'images/sheep/head_down/eat (1).png';
-sheepImages.eat[1].src = 'images/sheep/head_down/eat (2).png';
+let sheepImagesLoaded = false;
+function loadSheepImages(assets) {
+    if (sheepImagesLoaded) return;
+    if (assets) {
+        sheepImages.down = assets.getAsset('images', 'images/sheep/down.png');
+        sheepImages.up = assets.getAsset('images', 'images/sheep/up.png');
+        sheepImages.right = assets.getAsset('images', 'images/sheep/right.png');
+        sheepImages.walk[0] = assets.getAsset('images', 'images/sheep/left.png');
+        sheepImages.walk[1] = assets.getAsset('images', 'images/sheep/walk_1.png');
+        sheepImages.walk[2] = assets.getAsset('images', 'images/sheep/walk_2.png');
+        sheepImages.walk[3] = assets.getAsset('images', 'images/sheep/walk_3.png');
+        sheepImages.eat[0] = assets.getAsset('images', 'images/sheep/head_down/eat (1).png');
+        sheepImages.eat[1] = assets.getAsset('images', 'images/sheep/head_down/eat (2).png');
+    } else {
+        sheepImages.down.src = 'images/sheep/down.png';
+        sheepImages.up.src = 'images/sheep/up.png';
+        sheepImages.right.src = 'images/sheep/right.png';
+        sheepImages.walk[0].src = 'images/sheep/left.png';    // Frame 0
+        sheepImages.walk[1].src = 'images/sheep/walk_1.png';  // Frame 1
+        sheepImages.walk[2].src = 'images/sheep/walk_2.png';  // Frame 2
+        sheepImages.walk[3].src = 'images/sheep/walk_3.png';  // Frame 3
+        sheepImages.eat[0].src = 'images/sheep/head_down/eat (1).png';
+        sheepImages.eat[1].src = 'images/sheep/head_down/eat (2).png';
+    }
+    sheepImagesLoaded = true;
+}
 
 export class Sheep {
-    constructor(playerX, playerY) {
-        this.x = playerX + Math.random() * 100 - 50;
-        this.y = playerY + Math.random() * 100 - 50;
+    constructor(x, y, assets) {
+        loadSheepImages(assets);
+        this.x = x;
+        this.y = y;
         this.color = '#fff';
         this.woolGrowth = 0; // 0 to 100
         this.thirst = 0; // 0 to 120

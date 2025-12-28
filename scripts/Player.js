@@ -1,7 +1,7 @@
 import { drawEmoji } from './Utils.js';
 
 export class Player {
-    constructor() {
+    constructor(assets) {
         this.x = 0;
         this.y = 0;
         this.targetX = 0;
@@ -11,23 +11,32 @@ export class Player {
         this.isMoving = false;
         this.actionRange = 60;
 
-        this.sprite = new Image();
-        this.sprite.src = 'images/newplayer/player1.png';
+        if (assets) {
+            this.sprite = assets.getAsset('images', 'images/newplayer/player1.png');
+            this.sprite2 = assets.getAsset('images', 'images/newplayer/player2.png');
+            this.shearingSprite = assets.getAsset('images', 'images/playercis.png');
+            this.shearingSprite2 = assets.getAsset('images', 'images/playercis2.png');
+            this.attackSprite = assets.getAsset('images', 'images/newplayer/playerhitow.png');
+            this.attackSprite2 = assets.getAsset('images', 'images/newplayer/playerhitone.png');
+        } else {
+            this.sprite = new Image();
+            this.sprite.src = 'images/newplayer/player1.png';
 
-        this.sprite2 = new Image();
-        this.sprite2.src = 'images/newplayer/player2.png';
+            this.sprite2 = new Image();
+            this.sprite2.src = 'images/newplayer/player2.png';
 
-        this.shearingSprite = new Image();
-        this.shearingSprite.src = 'images/playercis.png';
+            this.shearingSprite = new Image();
+            this.shearingSprite.src = 'images/playercis.png';
 
-        this.shearingSprite2 = new Image();
-        this.shearingSprite2.src = 'images/playercis2.png';
+            this.shearingSprite2 = new Image();
+            this.shearingSprite2.src = 'images/playercis2.png';
 
-        this.attackSprite = new Image();
-        this.attackSprite.src = 'images/newplayer/playerhitow.png';
+            this.attackSprite = new Image();
+            this.attackSprite.src = 'images/newplayer/playerhitow.png';
 
-        this.attackSprite2 = new Image(); // Frame 2 source if needed, but we'll use one sheet
-        this.attackSprite2.src = 'images/newplayer/playerhitone.png';
+            this.attackSprite2 = new Image(); // Frame 2 source if needed, but we'll use one sheet
+            this.attackSprite2.src = 'images/newplayer/playerhitone.png';
+        }
 
         this.isShearing = false;
         this.shearingFrame = 0; // 0 or 1 for shearing animation

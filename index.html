@@ -361,6 +361,32 @@
             height: 20px;
             accent-color: #ffd700;
         }
+
+        /* Loading Bar Styles */
+        .loading-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            display: block;
+        }
+
+        .loading-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ffec80);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            transition: width 0.3s ease;
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: #deb887;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 
@@ -410,7 +436,15 @@
                     <li><span>التطوير:</span> اشترِ الخراف والترقيات من المخيم ⛺</li>
                     <li><span>الهدف:</span> حافظ على قطيعك لأطول فترة ممكنة! ⏳</li>
                 </ul>
-                <button class="start-btn" id="start-game-btn">ابدأ المغامرة 🚀</button>
+
+                <div id="loading-section">
+                    <div class="loading-text" id="loading-status">جاري تحميل الموارد...</div>
+                    <div class="loading-container">
+                        <div class="loading-bar" id="loading-bar"></div>
+                    </div>
+                </div>
+
+                <button class="start-btn" id="start-game-btn" disabled>ابدأ المغامرة 🚀</button>
                 <div class="sound-toggle-container" id="sound-toggle-wrap">
                     <label for="sound-checkbox">تفعيل الصوت 🔊</label>
                     <input type="checkbox" id="sound-checkbox" checked>

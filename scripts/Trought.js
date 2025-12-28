@@ -1,5 +1,5 @@
 export class Trought {
-    constructor(rangeMultiplier = 1) {
+    constructor(rangeMultiplier = 1, assets) {
         // Using a ring-based spawn to ensure it's not too close to the center
         // The minimum and maximum distance both scale with the range multiplier
         const minDistance = 300 * rangeMultiplier;
@@ -17,11 +17,16 @@ export class Trought {
         this.currentUsers = 0;
         this.isExpired = false;
 
-        this.imgNormal = new Image();
-        this.imgNormal.src = 'images/trought/troughtdis.png';
+        if (assets) {
+            this.imgNormal = assets.getAsset('images', 'images/trought/troughtdis.png');
+            this.imgTransformed = assets.getAsset('images', 'images/trought/trought.png');
+        } else {
+            this.imgNormal = new Image();
+            this.imgNormal.src = 'images/trought/troughtdis.png';
 
-        this.imgTransformed = new Image();
-        this.imgTransformed.src = 'images/trought/trought.png';
+            this.imgTransformed = new Image();
+            this.imgTransformed.src = 'images/trought/trought.png';
+        }
 
         this.width = 100; // Fallback size
         this.height = 100;

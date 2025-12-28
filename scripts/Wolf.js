@@ -1,11 +1,18 @@
 export class Wolf {
-    constructor() {
+    constructor(assets) {
         this.x = (Math.random() * 2000 - 1000);
         this.y = (Math.random() * 2000 - 1000);
 
-        this.frames = [new Image(), new Image()];
-        this.frames[0].src = 'images/wolf1.png';
-        this.frames[1].src = 'images/wolf2.png';
+        if (assets) {
+            this.frames = [
+                assets.getAsset('images', 'images/wolf1.png'),
+                assets.getAsset('images', 'images/wolf2.png')
+            ];
+        } else {
+            this.frames = [new Image(), new Image()];
+            this.frames[0].src = 'images/wolf1.png';
+            this.frames[1].src = 'images/wolf2.png';
+        }
 
         this.width = 40; // even smaller!
         this.height = 40;

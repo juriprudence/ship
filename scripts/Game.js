@@ -5,11 +5,15 @@ import { Particle, Ripple, DustParticle } from './Utils.js';
 import { Trought } from './Trought.js';
 import { SoundManager } from './SoundManager.js';
 import { Wolf } from './Wolf.js';
+import { AssetLoader } from './AssetLoader.js';
 
 export class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+
+        this.loader = new AssetLoader();
+        this.assetsReady = false;
 
         this.gameState = {
             gold: 0,
@@ -21,9 +25,13 @@ export class Game {
         };
 
         this.camera = { x: 0, y: 0 };
-        this.player = new Player();
-        this.world = new World();
-        this.trought = new Trought(1); // Day 1 multiplier
+
+        // Postpone intensive object creation until assets are ready
+        this.player = null;
+        this.world = null;
+        this.soundManager = null;
+        this.trought = null;
+
         this.sheepList = [];
         this.wolfList = [];
         this.MAX_SHEEP = 50;
@@ -31,7 +39,6 @@ export class Game {
         this.particles = [];
         this.ripples = [];
 
-        this.soundManager = new SoundManager();
         this.gameStarted = false;
 
         this.placementMode = null; // 'grassland' or null
@@ -54,19 +61,6 @@ export class Game {
         };
 
         this.wolfRespawnQueue = [];
-
-        this.player.onFootstep = (x, y) => {
-            const inWater = (this.world.tileMap && this.world.tileMap.isPositionInLayer(x, y, 'water')) ||
-                (Math.hypot(x - this.world.oasis.x, y - this.world.oasis.y) < this.world.oasis.radius);
-
-            if (inWater) {
-                this.createRippleVFX(x, y);
-            } else {
-                for (let i = 0; i < 4; i++) {
-                    this.particles.push(new DustParticle(x, y + 10)); // Spawn at feet
-                }
-            }
-        };
 
         this.bindMethods();
     }
@@ -109,24 +103,122 @@ export class Game {
         document.getElementById('open-shop-btn').addEventListener('click', () => this.toggleShop(true));
         document.getElementById('close-shop-btn').addEventListener('click', () => this.toggleShop(false));
 
-        // Sound toggle binding
-        const soundCheckbox = document.getElementById('sound-checkbox');
-        if (soundCheckbox) {
-            soundCheckbox.addEventListener('change', this.handleSoundToggle);
-            // Initialize state in case browser remembered checkbox state
-            this.soundManager.setSoundEnabled(soundCheckbox.checked);
-        }
+        // Sound toggle binding - moved soundManager initialization to after assets ready
 
-        // Mouse movement tracking for placement ghost - integrated into onPointerMove
+        this.preloadAssets();
     }
 
-    // Don't start loop or spawn sheep yet
-    // requestAnimationFrame(this.gameLoop);
+    async preloadAssets() {
+        const images = [
+            'images/newplayer/player1.png',
+            'images/newplayer/player2.png',
+            'images/playercis.png',
+            'images/playercis2.png',
+            'images/newplayer/playerhitow.png',
+            'images/newplayer/playerhitone.png',
+            'images/sheep/down.png',
+            'images/sheep/up.png',
+            'images/sheep/right.png',
+            'images/sheep/left.png',
+            'images/sheep/walk_1.png',
+            'images/sheep/walk_2.png',
+            'images/sheep/walk_3.png',
+            'images/sheep/head_down/eat (1).png',
+            'images/sheep/head_down/eat (2).png',
+            'images/wolf1.png',
+            'images/wolf2.png',
+            'scripts/maps/spritesheet.png',
+            'images/trought/troughtdis.png',
+            'images/trought/trought.png'
+        ];
+
+        const sounds = [
+            'sounds/grasseating.mp3',
+            'sounds/footsteps.mp3',
+            'sounds/scissors_cutting.mp3',
+            'sounds/hit.mp3',
+            'sounds/daying_sheep.mp3',
+            'sounds/Shear_the_wool.mp3'
+        ];
+
+        const jsons = [
+            'scripts/maps/map.json'
+        ];
+
+        const progressBar = document.getElementById('loading-bar');
+        const statusText = document.getElementById('loading-status');
+        const startBtn = document.getElementById('start-game-btn');
+
+        this.loader.onProgress = (progress) => {
+            const percentage = Math.round(progress * 100);
+            if (progressBar) progressBar.style.width = `${percentage}%`;
+            if (statusText) statusText.textContent = `جاري تحميل الموارد... ${percentage}%`;
+        };
+
+        this.loader.onComplete = () => {
+            this.assetsReady = true;
+            if (statusText) statusText.textContent = 'تم تحميل جميع الموارد بنجاح! 📦';
+            if (startBtn) {
+                startBtn.disabled = false;
+                startBtn.classList.add('ready');
+            }
+
+            // Re-initialize key components now that assets are ready
+            this.soundManager = new SoundManager(this.loader);
+            this.world = new World(this.loader);
+            this.player = new Player(this.loader);
+            this.trought = new Trought(1, this.loader);
+
+            // Hook up footstep callback
+            this.player.onFootstep = (x, y) => {
+                const inWater = (this.world.tileMap && this.world.tileMap.isPositionInLayer(x, y, 'water')) ||
+                    (Math.hypot(x - this.world.oasis.x, y - this.world.oasis.y) < this.world.oasis.radius);
+
+                if (inWater) {
+                    this.createRippleVFX(x, y);
+                } else {
+                    for (let i = 0; i < 4; i++) {
+                        this.particles.push(new DustParticle(x, y + 10));
+                    }
+                }
+            };
+
+            // Initial sound state
+            const soundCheckbox = document.getElementById('sound-checkbox');
+            if (soundCheckbox) {
+                soundCheckbox.addEventListener('change', this.handleSoundToggle);
+                this.soundManager.setSoundEnabled(soundCheckbox.checked);
+            }
+        };
+
+        try {
+            await Promise.all([
+                this.loader.loadImages(images),
+                this.loader.loadSounds(sounds),
+                this.loader.loadJSONs(jsons)
+            ]);
+        } catch (e) {
+            console.error("Asset loading failed", e);
+            if (statusText) statusText.textContent = 'فشل تحميل بعض الموارد. حاول تحديث الصفحة.';
+        }
+    }
+
+    startGame() {
+        if (!this.assetsReady) return;
+
+        this.gameStarted = true;
+        document.getElementById('start-screen').style.display = 'none';
+
+        // Initial Spawn
+        for (let i = 0; i < 3; i++) this.spawnSheep();
+        for (let i = 0; i < 5; i++) this.wolfList.push(new Wolf(this.loader));
+
+        requestAnimationFrame(this.gameLoop);
+    }
 
     handleSoundToggle(e) {
-        this.soundManager.setSoundEnabled(e.target.checked);
-        if (e.target.checked) {
-            this.soundManager.playEffect('toggle_on');
+        if (this.soundManager) {
+            this.soundManager.setSoundEnabled(e.target.checked);
         }
     }
 
@@ -137,17 +229,6 @@ export class Game {
         }
     }
 
-    startGame() {
-        this.gameStarted = true;
-        document.getElementById('start-screen').style.display = 'none';
-
-        // Initial Spawn
-        for (let i = 0; i < 3; i++) this.spawnSheep();
-        for (let i = 0; i < 5; i++) this.wolfList.push(new Wolf());
-
-        requestAnimationFrame(this.gameLoop);
-    }
-
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
@@ -155,11 +236,12 @@ export class Game {
 
     spawnSheep() {
         if (this.sheepList.length >= this.MAX_SHEEP) return;
-        this.sheepList.push(new Sheep(this.player.x, this.player.y));
+        this.sheepList.push(new Sheep(this.player.x, this.player.y, this.loader));
         this.updateUI();
     }
 
     onPointerDown(e) {
+        if (!this.assetsReady) return;
         const rect = this.canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left + this.camera.x;
         const clickY = e.clientY - rect.top + this.camera.y;
@@ -258,6 +340,7 @@ export class Game {
     }
 
     onPointerMove(e) {
+        if (!this.assetsReady) return;
         const rect = this.canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left + this.camera.x;
         const clickY = e.clientY - rect.top + this.camera.y;
@@ -282,6 +365,7 @@ export class Game {
     }
 
     onPointerUp(e) {
+        if (!this.assetsReady) return;
         if (!this.pointer.isDown) return;
 
         const rect = this.canvas.getBoundingClientRect();
@@ -337,7 +421,7 @@ export class Game {
         // Move player to sheep
         this.player.handleInput(sheep.x, sheep.y);
 
-        this.soundManager.playEffect('shear_the_wool');
+        this.soundManager.playEffect('Shear_the_wool');
         this.createParticleVFX(sheep.x, sheep.y, '#fff', 10);
         this.showNotification("توجه إلى الخروف لجمع الذهب! 🚶‍♂️");
 
@@ -438,6 +522,7 @@ export class Game {
 
         // Spawn Initial Sheep
         for (let i = 0; i < 3; i++) this.spawnSheep();
+        for (let i = 0; i < 5; i++) this.wolfList.push(new Wolf(this.loader));
 
         this.updateUI();
 
@@ -525,7 +610,7 @@ export class Game {
         if (this.trought.isExpired) {
             // Range increases by 1.0 for each day (e.g., Day 1: 1.0, Day 2: 2.0, Day 3: 3.0, etc.)
             const rangeMultiplier = 1 + (this.gameState.day - 1) * 1.0;
-            this.trought = new Trought(rangeMultiplier);
+            this.trought = new Trought(rangeMultiplier, this.loader);
             this.showNotification("انتهى مفعول الحوض! 🥀");
         }
 
@@ -612,7 +697,7 @@ export class Game {
         for (let i = this.wolfRespawnQueue.length - 1; i >= 0; i--) {
             this.wolfRespawnQueue[i].timer -= dt;
             if (this.wolfRespawnQueue[i].timer <= 0) {
-                this.wolfList.push(new Wolf());
+                this.wolfList.push(new Wolf(this.loader));
                 this.wolfRespawnQueue.splice(i, 1);
             }
         }

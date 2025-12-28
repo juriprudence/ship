@@ -1,17 +1,16 @@
 export class SoundManager {
-    constructor() {
+    constructor(assets) {
         this.soundEnabled = true;
+        this.assets = assets;
 
-        // Initialize grass eating sound
-        this.grassEatingSound = new Audio('sounds/grasseating.mp3');
+        // Use preloaded sounds if available
+        this.grassEatingSound = assets ? assets.getAsset('sounds', 'sounds/grasseating.mp3') : new Audio('sounds/grasseating.mp3');
         this.grassEatingSound.loop = true;
         this.isGrassEatingPlaying = false;
 
-        // Pre-load footstep sound
-        this.footstepSound = new Audio('sounds/footsteps.mp3');
+        this.footstepSound = assets ? assets.getAsset('sounds', 'sounds/footsteps.mp3') : new Audio('sounds/footsteps.mp3');
 
-        // Pre-load scissor sound
-        this.scissorSound = new Audio('sounds/scissors_cutting.mp3');
+        this.scissorSound = assets ? assets.getAsset('sounds', 'sounds/scissors_cutting.mp3') : new Audio('sounds/scissors_cutting.mp3');
         this.scissorSound.loop = true;
         this.isShearingPlaying = false;
     }
@@ -54,10 +53,16 @@ export class SoundManager {
     playEffect(name) {
         if (!this.canPlay()) return;
 
-        // Try to play from sounds folder
-        const audio = new Audio(`sounds/${name}.mp3`);
+        const url = `sounds/${name}.mp3`;
+        let audio;
+
+        if (this.assets && this.assets.getAsset('sounds', url)) {
+            audio = this.assets.getAsset('sounds', url).cloneNode();
+        } else {
+            audio = new Audio(url);
+        }
+
         audio.play().catch(e => {
-            // Fallback or generic error
             console.warn(`Could not play sound: ${name}`, e);
         });
         console.log(`Playing effect: ${name}`);
@@ -66,9 +71,7 @@ export class SoundManager {
     playFootstep() {
         if (!this.canPlay()) return;
 
-        // Clone for overlapping sounds if needed, but for simple footsteps 
-        // we can just reset and play if it's short enough.
-        // Or create a new one to allow overlap.
+        // Clone for overlapping sounds
         const step = this.footstepSound.cloneNode();
         step.volume = 0.4; // Slightly quieter for footsteps
         step.play().catch(e => { });

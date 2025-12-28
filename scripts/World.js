@@ -1,18 +1,35 @@
 import { drawEmoji } from './Utils.js';
 import { TileMap } from './TileMap.js';
 
-
 export class World {
-    constructor() {
+    constructor(assets) {
         this.oasis = { x: 400, y: 300, radius: 100 };
         this.tent = { x: -300, y: -200, radius: 60, width: 120, height: 100 };
-
-
 
         this.palms = [];
         this.cacti = [];
 
-        // Load Map
+        // Use preloaded assets if available
+        if (assets) {
+            this.tileset = assets.getAsset('images', 'scripts/maps/spritesheet.png');
+            const data = assets.getAsset('json', 'scripts/maps/map.json');
+            if (data && this.tileset) {
+                this.tileMap = new TileMap(data, this.tileset);
+                this.tileMap.setScale(3);
+                this.tileMap.setCenter(400, 300);
+            } else {
+                console.warn('Preloaded assets for map not found. Falling back to direct load.');
+                this.loadMapDirectly();
+            }
+        } else {
+            // Load Map (Fallback)
+            this.loadMapDirectly();
+        }
+
+        this.initDecor();
+    }
+
+    loadMapDirectly() {
         this.tileset = new Image();
         this.tileset.src = 'scripts/maps/spritesheet.png';
 
@@ -21,14 +38,10 @@ export class World {
             .then(response => response.json())
             .then(data => {
                 this.tileMap = new TileMap(data, this.tileset);
-                // Scale it up significantly to cover the world (128x128 tiles)
-                // 17 * 128 = 2176px wide, which is about the world size.
                 this.tileMap.setScale(3);
-                this.tileMap.setCenter(400, 300); // Center around the oasis area
+                this.tileMap.setCenter(400, 300);
             })
             .catch(err => console.error('Failed to load map:', err));
-
-        this.initDecor();
     }
 
     initDecor() {
@@ -90,8 +103,6 @@ export class World {
         ctx.strokeStyle = '#c2b280';
         ctx.lineWidth = 10;
         ctx.stroke();
-
-
 
         // Palms
         this.palms.forEach(p => {

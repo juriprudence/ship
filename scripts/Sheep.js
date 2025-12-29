@@ -400,4 +400,26 @@ export class Sheep {
             ctx.fillRect(this.x - 10, this.y - 52, Math.max(0, hungerW), 4);
         }
     }
+    serialize() {
+        return {
+            x: this.x,
+            y: this.y,
+            woolGrowth: this.woolGrowth,
+            thirst: this.thirst,
+            hunger: this.hunger,
+            wolfHits: this.wolfHits,
+            facing: this.facing
+        };
+    }
+
+    deserialize(data) {
+        if (!data) return;
+        this.x = data.x;
+        this.y = data.y;
+        this.woolGrowth = data.woolGrowth;
+        this.thirst = data.thirst;
+        this.hunger = data.hunger;
+        this.wolfHits = data.wolfHits || 0;
+        this.facing = data.facing || 'down';
+    }
 }

@@ -49,6 +49,32 @@
             border-bottom: 2px solid rgba(255, 255, 255, 0.1);
         }
 
+        .save-load-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .save-btn, .load-btn {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid #ffd700;
+            color: #ffd700;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .save-btn:hover, .load-btn:hover {
+            background: rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .save-btn:disabled, .load-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .resource {
             display: flex;
             align-items: center;
@@ -399,6 +425,10 @@
                 <div class="resource">🪙 <span id="gold-display">0</span></div>
                 <div class="resource">🐑 <span id="sheep-display">20</span></div>
                 <div class="resource">🧶 <span id="wool-display">0</span></div>
+            </div>
+            <div class="save-load-buttons">
+                <button class="save-btn" id="save-game-btn" onclick="window.game.saveGame()">💾 حفظ</button>
+                <button class="load-btn" id="load-game-btn" onclick="window.game.loadGame()">📂 تحميل</button>
             </div>
             <div style="font-size: 14px; color: #ddd;">اليوم <span id="day-display">1</span></div>
         </div>

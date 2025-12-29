@@ -162,4 +162,20 @@ export class TileMap {
         }
         ctx.imageSmoothingEnabled = originalSmoothing;
     }
+    serialize() {
+        return {
+            consumedTiles: Array.from(this.consumedTiles.entries()),
+            hiddenTiles: Array.from(this.hiddenTiles)
+        };
+    }
+
+    deserialize(data) {
+        if (!data) return;
+        if (data.consumedTiles) {
+            this.consumedTiles = new Map(data.consumedTiles);
+        }
+        if (data.hiddenTiles) {
+            this.hiddenTiles = new Set(data.hiddenTiles);
+        }
+    }
 }

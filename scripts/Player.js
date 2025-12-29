@@ -259,4 +259,23 @@ export class Player {
             ctx.stroke();
         }
     }
+    serialize() {
+        return {
+            x: this.x,
+            y: this.y,
+            speed: this.speed,
+            direction: this.direction
+        };
+    }
+
+    deserialize(data) {
+        if (!data) return;
+        this.x = data.x;
+        this.y = data.y;
+        this.targetX = data.x;
+        this.targetY = data.y;
+        this.speed = data.speed || 150;
+        this.direction = data.direction || 1;
+        this.isMoving = false;
+    }
 }

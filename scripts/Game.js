@@ -6,6 +6,8 @@ import { Trought } from './Trought.js';
 import { SoundManager } from './SoundManager.js';
 import { Wolf } from './Wolf.js';
 import { AssetLoader } from './AssetLoader.js';
+import { SaveSystem } from './SaveSystem.js';
+import { GoldParticle, GoldBurst } from './GoldParticle.js';
 
 export class Game {
     constructor() {
@@ -38,6 +40,8 @@ export class Game {
 
         this.particles = [];
         this.ripples = [];
+        this.goldParticles = [];
+        this.goldBursts = [];
 
         this.gameStarted = false;
 
@@ -444,6 +448,30 @@ export class Game {
         this.gameState.woolCount++;
         this.gameState.gold += 10;
         this.showNotification("+10 ذهب 🪙");
+        
+        // Spawn gold particle animation
+        if (this.extractionState.sheep) {
+            const sheep = this.extractionState.sheep;
+            // Create multiple gold coins
+            const coinCount = 5;
+            for (let i = 0; i < coinCount; i++) {
+                setTimeout(() => {
+                    const offsetX = (Math.random() - 0.5) * 30;
+                    const offsetY = (Math.random() - 0.5) * 30;
+                    this.goldParticles.push(
+                        new GoldParticle(
+                            sheep.x + offsetX,
+                            sheep.y + offsetY,
+                            this.player.x,
+                            this.player.y
+                        )
+                    );
+                }, i * 50);
+            }
+            // Spawn burst effect at sheep location
+            this.goldBursts.push(new GoldBurst(sheep.x, sheep.y, 8));
+        }
+        
         this.updateUI();
         if (this.extractionState.sheep) {
             this.extractionState.sheep.isBeingSheared = false;
@@ -709,6 +737,10 @@ export class Game {
         // Ripples
         this.ripples = this.ripples.filter(r => r.life > 0);
         this.ripples.forEach(r => r.update(dt));
+
+        // Gold Particles
+        this.goldParticles = this.goldParticles.filter(p => p.update(dt));
+        this.goldBursts = this.goldBursts.filter(b => b.update(dt));
     }
 
     draw() {
@@ -748,6 +780,8 @@ export class Game {
         // VFX
         this.particles.forEach(p => p.draw(this.ctx));
         this.ripples.forEach(r => r.draw(this.ctx));
+        this.goldParticles.forEach(p => p.draw(this.ctx));
+        this.goldBursts.forEach(b => b.draw(this.ctx));
 
         // Night Overlay
         const dayProgress = this.gameState.time % 10;
@@ -811,6 +845,27 @@ export class Game {
         if (upgradeBtn && upgradeBtn.textContent !== "السرعة القصوى") {
             upgradeBtn.disabled = this.gameState.gold < 100;
         }
+    }
+
+    // Save/Load Methods
+    saveGame() {
+        const success = SaveSystem.save(this);
+        if (success) {
+            this.showNotification("تم حفظ اللعبة! 💾");
+        } else {
+            this.showNotification("فشل في حفظ اللعبة! ❌");
+        }
+        return success;
+    }
+
+    loadGame() {
+        const result = SaveSystem.load(this);
+        this.showNotification(result.message);
+        return result;
+    }
+
+    hasSaveGame() {
+        return SaveSystem.hasSave();
     }
 }
 

@@ -244,4 +244,22 @@ export class Wolf {
             this.y <= camera.y + canvasHeight + margin
         );
     }
+    serialize() {
+        return {
+            x: this.x,
+            y: this.y,
+            health: this.health,
+            state: this.state,
+            facing: this.facing
+        };
+    }
+
+    deserialize(data) {
+        if (!data) return;
+        this.x = data.x;
+        this.y = data.y;
+        this.health = data.health ?? 2;
+        this.state = data.state || 'follow';
+        this.facing = data.facing || 'down';
+    }
 }

@@ -77,4 +77,24 @@ export class Trought {
         return (x > this.x - this.width / 2 && x < this.x + this.width / 2 &&
             y > this.y - this.height / 2 && y < this.y + this.height / 2);
     }
+    serialize() {
+        return {
+            x: this.x,
+            y: this.y,
+            isTransformed: this.isTransformed,
+            timer: this.timer,
+            isExpired: this.isExpired,
+            currentUsers: this.currentUsers
+        };
+    }
+
+    deserialize(data) {
+        if (!data) return;
+        this.x = data.x;
+        this.y = data.y;
+        this.isTransformed = data.isTransformed;
+        this.timer = data.timer;
+        this.isExpired = data.isExpired;
+        this.currentUsers = data.currentUsers || 0;
+    }
 }

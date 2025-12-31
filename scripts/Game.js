@@ -148,7 +148,10 @@ export class Game {
             'images/cow/right.png',
             'images/cow/cow_animation/1.png',
             'images/cow/cow_animation/2.png',
+            'images/cow/cow_animation/2.png',
             'images/cow/cow_animation/3.png',
+            'images/cow/head_down/head_down.png',
+            'images/cow/head_down/head_downt.png',
             'images/wolf1.png',
             'images/wolf2.png',
             'scripts/maps/spritesheet.png',
@@ -498,7 +501,7 @@ export class Game {
         this.gameState.woolCount++;
         this.gameState.gold += 10;
         this.showNotification("+10 ذهب 🪙");
-        
+
         // Spawn gold particle animation
         if (this.extractionState.sheep) {
             const sheep = this.extractionState.sheep;
@@ -521,7 +524,7 @@ export class Game {
             // Spawn burst effect at sheep location
             this.goldBursts.push(new GoldBurst(sheep.x, sheep.y, 8));
         }
-        
+
         this.updateUI();
         if (this.extractionState.sheep) {
             this.extractionState.sheep.isBeingSheared = false;
@@ -532,76 +535,75 @@ export class Game {
         this.player.isShearing = false;
     }
 
-        // Milk Collection Methods (same as sheep wool collection)
-        startMilking(cow) {
-            if (this.milkState.active) return;
+    // Milk Collection Methods (same as sheep wool collection)
+    startMilking(cow) {
+        if (this.milkState.active) return;
 
-            cow.milkProduction = 0;
-            this.milkState = {
-                cow: cow,
-                timer: 0,
-                active: true,
-                hasReached: false
-            };
+        cow.milkProduction = 0;
+        this.milkState = {
+            cow: cow,
+            timer: 0,
+            active: true,
+            hasReached: false
+        };
 
-            // Move player to cow
-            this.player.handleInput(cow.x, cow.y);
+        // Move player to cow
+        this.player.handleInput(cow.x, cow.y);
 
-            this.soundManager.playEffect('milkking');
-            this.createParticleVFX(cow.x, cow.y, '#fff', 10);
-            this.showNotification("توجه إلى البقرة لجمع الحليب! 🚶‍♂️");
+        this.createParticleVFX(cow.x, cow.y, '#fff', 10);
+        this.showNotification("توجه إلى البقرة لجمع الحليب! 🚶‍♂️");
 
-            // Stop cow movement
-            cow.isBeingMilked = true;
+        // Stop cow movement
+        cow.isBeingMilked = true;
+    }
+
+    cancelMilking(message) {
+        if (this.milkState.cow) {
+            this.milkState.cow.isBeingMilked = false;
+        }
+        this.soundManager.stopMilkingSound();
+        this.milkState.active = false;
+        this.milkState.cow = null;
+        this.player.isMilking = false;
+        this.player.isShearing = false;
+        if (message) this.showNotification(message);
+    }
+
+    completeMilking() {
+        this.gameState.gold += 15;
+        this.showNotification("+15 ذهب من الحليب! 🥛");
+
+        // Spawn gold particle animation
+        if (this.milkState.cow) {
+            const cow = this.milkState.cow;
+            const coinCount = 5;
+            for (let i = 0; i < coinCount; i++) {
+                setTimeout(() => {
+                    const offsetX = (Math.random() - 0.5) * 30;
+                    const offsetY = (Math.random() - 0.5) * 30;
+                    this.goldParticles.push(
+                        new GoldParticle(
+                            cow.x + offsetX,
+                            cow.y + offsetY,
+                            this.player.x,
+                            this.player.y
+                        )
+                    );
+                }, i * 50);
+            }
+            this.goldBursts.push(new GoldBurst(cow.x, cow.y, 8));
         }
 
-        cancelMilking(message) {
-            if (this.milkState.cow) {
-                this.milkState.cow.isBeingMilked = false;
-            }
-            this.soundManager.stopShearingSound();
-            this.milkState.active = false;
-            this.milkState.cow = null;
-            this.player.isMilking = false;
-            this.player.isShearing = false;
-            if (message) this.showNotification(message);
+        this.updateUI();
+        if (this.milkState.cow) {
+            this.milkState.cow.isBeingMilked = false;
         }
-
-        completeMilking() {
-            this.gameState.gold += 15;
-            this.showNotification("+15 ذهب من الحليب! 🥛");
-            
-            // Spawn gold particle animation
-            if (this.milkState.cow) {
-                const cow = this.milkState.cow;
-                const coinCount = 5;
-                for (let i = 0; i < coinCount; i++) {
-                    setTimeout(() => {
-                        const offsetX = (Math.random() - 0.5) * 30;
-                        const offsetY = (Math.random() - 0.5) * 30;
-                        this.goldParticles.push(
-                            new GoldParticle(
-                                cow.x + offsetX,
-                                cow.y + offsetY,
-                                this.player.x,
-                                this.player.y
-                            )
-                        );
-                    }, i * 50);
-                }
-                this.goldBursts.push(new GoldBurst(cow.x, cow.y, 8));
-            }
-            
-            this.updateUI();
-            if (this.milkState.cow) {
-                this.milkState.cow.isBeingMilked = false;
-            }
-            this.soundManager.stopShearingSound();
-            this.milkState.active = false;
-            this.milkState.cow = null;
-            this.player.isMilking = false;
-            this.player.isShearing = false;
-        }
+        this.soundManager.stopMilkingSound();
+        this.milkState.active = false;
+        this.milkState.cow = null;
+        this.player.isMilking = false;
+        this.player.isShearing = false;
+    }
 
     shearSheep(sheep) {
         // This old method is now replaced by startExtraction
@@ -778,7 +780,7 @@ export class Game {
                     this.showNotification("جاري جمع الحليب... اثبت مكانك! ⏳");
                     this.player.isMilking = true;
                     this.player.isShearing = true;
-                    this.soundManager.startShearingSound();
+                    this.soundManager.startMilkingSound();
                 }
                 this.milkState.timer += dt;
 

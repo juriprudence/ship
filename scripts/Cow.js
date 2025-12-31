@@ -8,7 +8,9 @@ const cowImages = {
     right: new Image(),
     anim1: new Image(),
     anim2: new Image(),
-    anim3: new Image()
+    anim3: new Image(),
+    headDown1: new Image(),
+    headDown2: new Image()
 };
 
 let cowImagesLoaded = false;
@@ -22,6 +24,8 @@ function loadCowImages(assets) {
         cowImages.anim1 = assets.getAsset('images', 'images/cow/cow_animation/1.png');
         cowImages.anim2 = assets.getAsset('images', 'images/cow/cow_animation/2.png');
         cowImages.anim3 = assets.getAsset('images', 'images/cow/cow_animation/3.png');
+        cowImages.headDown1 = assets.getAsset('images', 'images/cow/head_down/head_down.png');
+        cowImages.headDown2 = assets.getAsset('images', 'images/cow/head_down/head_downt.png');
     } else {
         cowImages.down.src = 'images/cow/down.png';
         cowImages.up.src = 'images/cow/up.png';
@@ -30,6 +34,8 @@ function loadCowImages(assets) {
         cowImages.anim1.src = 'images/cow/cow_animation/1.png';
         cowImages.anim2.src = 'images/cow/cow_animation/2.png';
         cowImages.anim3.src = 'images/cow/cow_animation/3.png';
+        cowImages.headDown1.src = 'images/cow/head_down/head_down.png';
+        cowImages.headDown2.src = 'images/cow/head_down/head_downt.png';
     }
     cowImagesLoaded = true;
 }
@@ -40,7 +46,7 @@ export class Cow extends Animal {
         loadCowImages(assets);
         this.color = '#8B4513'; // Brown cow color
         this.milkProduction = 0; // 0 to 100
-        
+
         // Override dimensions for cow (larger than sheep)
         this.width = 100;
         this.height = 100;
@@ -69,7 +75,9 @@ export class Cow extends Animal {
         this.handleTroughtInteraction(trought, inTrought);
 
         // 5. Movement
-        this.updateMovement(dt, player, world, cowList, trought);
+        if (!this.isBeingMilked) {
+            this.updateMovement(dt, player, world, cowList, trought);
+        }
 
         // 6. Animation
         const getWalkSequence = () => [0, 1, 2, 1];
@@ -100,13 +108,22 @@ export class Cow extends Animal {
         const walkSequence = [0, 1, 2, 1];
 
         // Use animation frames when moving horizontally, otherwise use directional sprites
-        if (this.isMoving && (this.facing === 'left' || this.facing === 'right')) {
+        if (this.isEating) {
+            // Animation for eating/drinking
+            const eatSequence = [0, 1];
+            const frameIndex = eatSequence[this.animationFrame % eatSequence.length];
+            img = frameIndex === 0 ? cowImages.headDown1 : cowImages.headDown2;
+
+            if (this.facing === 'left') {
+                flip = true;
+            }
+        } else if (this.isMoving && (this.facing === 'left' || this.facing === 'right')) {
             // Use walking animation frames for left/right movement
             const frameIndex = walkSequence[this.animationFrame % walkSequence.length];
             if (frameIndex === 0) img = cowImages.anim1;
             else if (frameIndex === 1) img = cowImages.anim2;
             else img = cowImages.anim3;
-            
+
             if (this.facing === 'left') {
                 flip = true;
             }
@@ -115,9 +132,6 @@ export class Cow extends Animal {
             img = cowImages.up;
         } else if (this.isMoving && this.facing === 'down') {
             // When moving down: use down.png sprite
-            img = cowImages.down;
-        } else if (this.isEating) {
-            // Use down sprite when eating/drinking
             img = cowImages.down;
         } else {
             // Use directional sprites when idle

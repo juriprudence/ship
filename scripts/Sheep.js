@@ -42,7 +42,7 @@ export class Sheep extends Animal {
         loadSheepImages(assets);
         this.color = '#fff';
         this.woolGrowth = 0; // 0 to 100
-        
+
         // Override dimensions for sheep
         this.width = 80;
         this.height = 80;
@@ -71,7 +71,7 @@ export class Sheep extends Animal {
         this.handleTroughtInteraction(trought, inTrought);
 
         // 5. Movement
-        const movement = this.updateMovement(dt, player, world, sheepList, trought);
+        const movement = !this.isBeingSheared ? this.updateMovement(dt, player, world, sheepList, trought) : { moveX: 0, moveY: 0, speed: 0 };
 
         // 6. Animation
         const getWalkSequence = () => [0, 1, 2, 3, 2, 1];

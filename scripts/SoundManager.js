@@ -13,6 +13,10 @@ export class SoundManager {
         this.scissorSound = assets ? assets.getAsset('sounds', 'sounds/scissors_cutting.mp3') : new Audio('sounds/scissors_cutting.mp3');
         this.scissorSound.loop = true;
         this.isShearingPlaying = false;
+
+        this.milkSound = assets ? assets.getAsset('sounds', 'sounds/milkking.mp3') : new Audio('sounds/milkking.mp3');
+        this.milkSound.loop = true;
+        this.isMilkingPlaying = false;
     }
 
     setSoundEnabled(enabled) {
@@ -90,5 +94,20 @@ export class SoundManager {
         this.scissorSound.pause();
         this.scissorSound.currentTime = 0;
         this.isShearingPlaying = false;
+    }
+
+    startMilkingSound() {
+        if (!this.canPlay()) return;
+        if (this.isMilkingPlaying) return;
+
+        this.milkSound.currentTime = 0;
+        this.milkSound.play().catch(e => console.log(e));
+        this.isMilkingPlaying = true;
+    }
+
+    stopMilkingSound() {
+        this.milkSound.pause();
+        this.milkSound.currentTime = 0;
+        this.isMilkingPlaying = false;
     }
 }

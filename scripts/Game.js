@@ -1,6 +1,7 @@
 import { Player } from './Player.js';
 import { World } from './World.js';
 import { Sheep } from './Sheep.js';
+import { Cow } from './Cow.js';
 import { Particle, Ripple, DustParticle } from './Utils.js';
 import { Trought } from './Trought.js';
 import { SoundManager } from './SoundManager.js';
@@ -35,8 +36,10 @@ export class Game {
         this.trought = null;
 
         this.sheepList = [];
+        this.cowList = [];
         this.wolfList = [];
         this.MAX_SHEEP = 50;
+        this.MAX_COW = 30;
 
         this.particles = [];
         this.ripples = [];
@@ -50,6 +53,12 @@ export class Game {
 
         this.extractionState = {
             sheep: null,
+            timer: 0,
+            active: false
+        };
+
+        this.milkState = {
+            cow: null,
             timer: 0,
             active: false
         };
@@ -76,6 +85,7 @@ export class Game {
         this.onPointerMove = this.onPointerMove.bind(this);
         this.onPointerUp = this.onPointerUp.bind(this);
         this.buySheep = this.buySheep.bind(this);
+        this.buyCow = this.buyCow.bind(this);
         this.upgradeSpeed = this.upgradeSpeed.bind(this);
         this.restartGame = this.restartGame.bind(this);
 
@@ -97,6 +107,7 @@ export class Game {
 
         // Bind UI buttons
         document.getElementById('buy-sheep-btn').addEventListener('click', this.buySheep);
+        document.getElementById('buy-cow-btn').addEventListener('click', this.buyCow);
         document.getElementById('upgrade-speed-btn').addEventListener('click', this.upgradeSpeed);
 
         document.getElementById('confirm-purchase').addEventListener('click', this.confirmPurchase);
@@ -118,6 +129,8 @@ export class Game {
             'images/newplayer/player2.png',
             'images/playercis.png',
             'images/playercis2.png',
+            'images/playermi.png',
+            'images/playermi2.png',
             'images/newplayer/playerhitow.png',
             'images/newplayer/playerhitone.png',
             'images/sheep/down.png',
@@ -129,6 +142,13 @@ export class Game {
             'images/sheep/walk_3.png',
             'images/sheep/head_down/eat (1).png',
             'images/sheep/head_down/eat (2).png',
+            'images/cow/down.png',
+            'images/cow/up.png',
+            'images/cow/left.png',
+            'images/cow/right.png',
+            'images/cow/cow_animation/1.png',
+            'images/cow/cow_animation/2.png',
+            'images/cow/cow_animation/3.png',
             'images/wolf1.png',
             'images/wolf2.png',
             'scripts/maps/spritesheet.png',
@@ -142,7 +162,9 @@ export class Game {
             'sounds/scissors_cutting.mp3',
             'sounds/hit.mp3',
             'sounds/daying_sheep.mp3',
-            'sounds/Shear_the_wool.mp3'
+            'sounds/daying_cow.mp3',
+            'sounds/Shear_the_wool.mp3',
+            'sounds/milkking.mp3'
         ];
 
         const jsons = [
@@ -214,7 +236,8 @@ export class Game {
         document.getElementById('start-screen').style.display = 'none';
 
         // Initial Spawn
-        for (let i = 0; i < 3; i++) this.spawnSheep();
+        for (let i = 0; i < 2; i++) this.spawnSheep();
+        this.spawnCow();
         for (let i = 0; i < 5; i++) this.wolfList.push(new Wolf(this.loader));
 
         requestAnimationFrame(this.gameLoop);
@@ -241,6 +264,12 @@ export class Game {
     spawnSheep() {
         if (this.sheepList.length >= this.MAX_SHEEP) return;
         this.sheepList.push(new Sheep(this.player.x, this.player.y, this.loader));
+        this.updateUI();
+    }
+
+    spawnCow() {
+        if (this.cowList.length >= this.MAX_COW) return;
+        this.cowList.push(new Cow(this.player.x, this.player.y, this.loader));
         this.updateUI();
     }
 
@@ -340,6 +369,27 @@ export class Game {
 
         if (clickedSheep) {
             this.pointer.isDown = false;
+            return;
+        }
+
+        // Check for cow click (milk collection)
+        let clickedCow = false;
+        for (let c of this.cowList) {
+            const dx = c.x - clickX;
+            const dy = c.y - clickY;
+            if (dx * dx + dy * dy < 900) {
+                if (c.milkProduction >= 100) {
+                    this.startMilking(c);
+                    clickedCow = true;
+                } else {
+                    c.x += (Math.random() - 0.5) * 20;
+                    c.y += (Math.random() - 0.5) * 20;
+                }
+            }
+        }
+
+        if (clickedCow) {
+            this.pointer.isDown = false;
         }
     }
 
@@ -427,7 +477,7 @@ export class Game {
 
         this.soundManager.playEffect('Shear_the_wool');
         this.createParticleVFX(sheep.x, sheep.y, '#fff', 10);
-        this.showNotification("توجه إلى الخروف لجمع الذهب! 🚶‍♂️");
+        this.showNotification("توجه إلى الخروف لجمع الصوف! 🚶‍♂️");
 
         // Stop sheep movement
         sheep.isBeingSheared = true;
@@ -482,6 +532,77 @@ export class Game {
         this.player.isShearing = false;
     }
 
+        // Milk Collection Methods (same as sheep wool collection)
+        startMilking(cow) {
+            if (this.milkState.active) return;
+
+            cow.milkProduction = 0;
+            this.milkState = {
+                cow: cow,
+                timer: 0,
+                active: true,
+                hasReached: false
+            };
+
+            // Move player to cow
+            this.player.handleInput(cow.x, cow.y);
+
+            this.soundManager.playEffect('milkking');
+            this.createParticleVFX(cow.x, cow.y, '#fff', 10);
+            this.showNotification("توجه إلى البقرة لجمع الحليب! 🚶‍♂️");
+
+            // Stop cow movement
+            cow.isBeingMilked = true;
+        }
+
+        cancelMilking(message) {
+            if (this.milkState.cow) {
+                this.milkState.cow.isBeingMilked = false;
+            }
+            this.soundManager.stopShearingSound();
+            this.milkState.active = false;
+            this.milkState.cow = null;
+            this.player.isMilking = false;
+            this.player.isShearing = false;
+            if (message) this.showNotification(message);
+        }
+
+        completeMilking() {
+            this.gameState.gold += 15;
+            this.showNotification("+15 ذهب من الحليب! 🥛");
+            
+            // Spawn gold particle animation
+            if (this.milkState.cow) {
+                const cow = this.milkState.cow;
+                const coinCount = 5;
+                for (let i = 0; i < coinCount; i++) {
+                    setTimeout(() => {
+                        const offsetX = (Math.random() - 0.5) * 30;
+                        const offsetY = (Math.random() - 0.5) * 30;
+                        this.goldParticles.push(
+                            new GoldParticle(
+                                cow.x + offsetX,
+                                cow.y + offsetY,
+                                this.player.x,
+                                this.player.y
+                            )
+                        );
+                    }, i * 50);
+                }
+                this.goldBursts.push(new GoldBurst(cow.x, cow.y, 8));
+            }
+            
+            this.updateUI();
+            if (this.milkState.cow) {
+                this.milkState.cow.isBeingMilked = false;
+            }
+            this.soundManager.stopShearingSound();
+            this.milkState.active = false;
+            this.milkState.cow = null;
+            this.player.isMilking = false;
+            this.player.isShearing = false;
+        }
+
     shearSheep(sheep) {
         // This old method is now replaced by startExtraction
     }
@@ -491,6 +612,15 @@ export class Game {
             this.gameState.gold -= 100;
             this.spawnSheep();
             this.showNotification("تم شراء خروف جديد! 🐑");
+        }
+        this.updateUI();
+    }
+
+    buyCow() {
+        if (this.gameState.gold >= 150) {
+            this.gameState.gold -= 150;
+            this.spawnCow();
+            this.showNotification("تم شراء بقرة جديدة! 🥛");
         }
         this.updateUI();
     }
@@ -537,6 +667,7 @@ export class Game {
 
         // Reset Lists
         this.sheepList = [];
+        this.cowList = [];
         this.wolfList = [];
         this.particles = [];
         this.ripples = [];
@@ -549,7 +680,8 @@ export class Game {
         document.getElementById('game-over').style.display = 'none';
 
         // Spawn Initial Sheep
-        for (let i = 0; i < 3; i++) this.spawnSheep();
+        for (let i = 0; i < 2; i++) this.spawnSheep();
+        this.spawnCow();
         for (let i = 0; i < 5; i++) this.wolfList.push(new Wolf(this.loader));
 
         this.updateUI();
@@ -627,6 +759,43 @@ export class Game {
 
             if (this.extractionState.timer >= 5) {
                 this.completeExtraction();
+            }
+        }
+
+        // Milk Collection Logic (same as wool extraction)
+        if (this.milkState.active) {
+            const cow = this.milkState.cow;
+            const dist = Math.hypot(this.player.x - cow.x, this.player.y - cow.y);
+
+            if (!this.milkState.hasReached) {
+                this.player.targetX = cow.x;
+                this.player.targetY = cow.y;
+            }
+
+            if (dist < 20) {
+                if (!this.milkState.hasReached) {
+                    this.milkState.hasReached = true;
+                    this.showNotification("جاري جمع الحليب... اثبت مكانك! ⏳");
+                    this.player.isMilking = true;
+                    this.player.isShearing = true;
+                    this.soundManager.startShearingSound();
+                }
+                this.milkState.timer += dt;
+
+                this.player.x = cow.x;
+                this.player.y = cow.y;
+                this.player.targetX = cow.x;
+                this.player.targetY = cow.y;
+                this.player.isMoving = false;
+
+            } else if (this.milkState.hasReached && dist > 40) {
+                this.cancelMilking("ابتعدت كثيراً! تم إلغاء جمع الحليب ❌");
+            } else if (dist > 350 && !this.milkState.hasReached) {
+                this.cancelMilking("البقرة بعيدة جداً! ❌");
+            }
+
+            if (this.milkState.timer >= 5) {
+                this.completeMilking();
             }
         }
 
@@ -721,6 +890,32 @@ export class Game {
             this.triggerGameOver();
         }
 
+        // Cow Logic (same as sheep logic)
+        const survivingCows = [];
+        this.cowList.forEach(c => {
+            const event = c.update(dt, this.player, this.world, this.cowList, this.trought);
+            if (event && event.died) {
+                this.showNotification(`ماتت بقرة من ${event.cause}! 💀`);
+                this.soundManager.playEffect('daying_cow');
+                this.updateUI();
+            } else {
+                survivingCows.push(c);
+                if (c.isEating && c.isVisible(this.camera, this.canvas.width, this.canvas.height)) {
+                    if (Math.random() < 0.05) {
+                        this.createRippleVFX(c.x, c.y);
+                    }
+                }
+                if (c.isMoving && Math.random() < 0.1) {
+                    const inWater = (this.world.tileMap && this.world.tileMap.isPositionInLayer(c.x, c.y, 'water')) ||
+                        (Math.hypot(c.x - this.world.oasis.x, c.y - this.world.oasis.y) < this.world.oasis.radius);
+                    if (inWater) {
+                        this.createRippleVFX(c.x, c.y);
+                    }
+                }
+            }
+        });
+        this.cowList = survivingCows;
+
         // Wolf Respawn Logic
         for (let i = this.wolfRespawnQueue.length - 1; i >= 0; i--) {
             this.wolfRespawnQueue[i].timer -= dt;
@@ -755,6 +950,7 @@ export class Game {
         this.trought.draw(this.ctx);
 
         this.sheepList.forEach(s => s.draw(this.ctx));
+        this.cowList.forEach(c => c.draw(this.ctx));
         this.wolfList.forEach(w => w.draw(this.ctx));
         this.player.draw(this.ctx, this.gameState.time);
 
@@ -774,6 +970,21 @@ export class Game {
             // Progress
             const progress = Math.min(this.extractionState.timer / 5, 1);
             this.ctx.fillStyle = '#ffd700'; // Gold color
+            this.ctx.fillRect(px, py, barWidth * progress, barHeight);
+        }
+
+        // Milk Collection Progress Bar
+        if (this.milkState.active) {
+            const barWidth = 40;
+            const barHeight = 6;
+            const px = this.player.x - barWidth / 2;
+            const py = this.player.y - 70;
+
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.fillRect(px, py, barWidth, barHeight);
+
+            const progress = Math.min(this.milkState.timer / 5, 1);
+            this.ctx.fillStyle = '#fff'; // White for milk
             this.ctx.fillRect(px, py, barWidth * progress, barHeight);
         }
 
@@ -834,14 +1045,17 @@ export class Game {
     updateUI() {
         document.getElementById('gold-display').textContent = Math.floor(this.gameState.gold);
         document.getElementById('sheep-display').textContent = this.sheepList.length;
+        document.getElementById('cow-display').textContent = this.cowList.length;
         document.getElementById('wool-display').textContent = this.gameState.woolCount;
         document.getElementById('day-display').textContent = Math.floor(this.gameState.day);
 
         // Update Shop Buttons
         const buyBtn = document.getElementById('buy-sheep-btn');
+        const buyCowBtn = document.getElementById('buy-cow-btn');
         const upgradeBtn = document.getElementById('upgrade-speed-btn');
 
         if (buyBtn) buyBtn.disabled = this.gameState.gold < 100;
+        if (buyCowBtn) buyCowBtn.disabled = this.gameState.gold < 150;
         if (upgradeBtn && upgradeBtn.textContent !== "السرعة القصوى") {
             upgradeBtn.disabled = this.gameState.gold < 100;
         }

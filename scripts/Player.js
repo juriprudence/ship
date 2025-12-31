@@ -16,6 +16,8 @@ export class Player {
             this.sprite2 = assets.getAsset('images', 'images/newplayer/player2.png');
             this.shearingSprite = assets.getAsset('images', 'images/playercis.png');
             this.shearingSprite2 = assets.getAsset('images', 'images/playercis2.png');
+            this.milkingSprite = assets.getAsset('images', 'images/playermi.png');
+            this.milkingSprite2 = assets.getAsset('images', 'images/playermi2.png');
             this.attackSprite = assets.getAsset('images', 'images/newplayer/playerhitow.png');
             this.attackSprite2 = assets.getAsset('images', 'images/newplayer/playerhitone.png');
         } else {
@@ -31,6 +33,12 @@ export class Player {
             this.shearingSprite2 = new Image();
             this.shearingSprite2.src = 'images/playercis2.png';
 
+            this.milkingSprite = new Image();
+            this.milkingSprite.src = 'images/playermi.png';
+
+            this.milkingSprite2 = new Image();
+            this.milkingSprite2.src = 'images/playermi2.png';
+
             this.attackSprite = new Image();
             this.attackSprite.src = 'images/newplayer/playerhitow.png';
 
@@ -39,6 +47,8 @@ export class Player {
         }
 
         this.isShearing = false;
+        this.isMilking = false;
+        this.milkingFrame = 0; // 0 or 1 for milking animation
         this.shearingFrame = 0; // 0 or 1 for shearing animation
 
         this.isAttacking = false;
@@ -121,7 +131,12 @@ export class Player {
             return;
         }
 
-        if (this.isShearing) {
+        if (this.isMilking) {
+            if (this.animationTimer > 0.2) {
+                this.milkingFrame = (this.milkingFrame + 1) % 2;
+                this.animationTimer = 0;
+            }
+        } else if (this.isShearing) {
             if (this.animationTimer > 0.2) {
                 this.shearingFrame = (this.shearingFrame + 1) % 2;
                 this.animationTimer = 0;
@@ -185,6 +200,13 @@ export class Player {
             col = this.attackFrame % 2;
             row = Math.floor(this.attackFrame / 2);
             if (this.direction === 2) flipHorizontal = true;
+        } else if (this.isMilking && (this.milkingSprite.complete || this.milkingSprite2.complete)) {
+            currentSprite = (this.milkingFrame === 0 && this.milkingSprite.complete) ? this.milkingSprite : this.milkingSprite2;
+            currentFrameWidth = 500;
+            currentFrameHeight = 500;
+            col = 0;
+            row = 0;
+            if (this.direction === 2) flipHorizontal = true;
         } else if (this.isShearing && (this.shearingSprite.complete || this.shearingSprite2.complete)) {
             currentSprite = (this.shearingFrame === 0 && this.shearingSprite.complete) ? this.shearingSprite : this.shearingSprite2;
             currentFrameWidth = 500;
@@ -203,7 +225,7 @@ export class Player {
         }
 
         let screenHeight = 80; // Base height
-        if ((this.isShearing || this.isAttacking) && currentSprite.complete) {
+        if ((this.isMilking || this.isShearing || this.isAttacking) && currentSprite.complete) {
             screenHeight = 60; // Slightly smaller/different for these actions
         }
 
@@ -215,7 +237,7 @@ export class Player {
             yOffset = 40;
         }
 
-        if (this.isShearing || this.isAttacking) {
+        if (this.isMilking || this.isShearing || this.isAttacking) {
             yOffset = 25;
         }
 

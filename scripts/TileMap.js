@@ -13,6 +13,27 @@ export class TileMap {
         this.hiddenTiles = new Set();   // Key: "layerName:x,y"
     }
 
+    addTile(layerName, tx, ty, id) {
+        const layer = this.mapData.layers.find(l => l.name === layerName);
+        if (!layer) return;
+
+        // Ensure tiles array exists
+        if (!layer.tiles) layer.tiles = [];
+
+        // Remove from hidden if it was there (e.g. regrowing eaten grass)
+        const key = `${layerName}:${tx},${ty}`;
+        this.hiddenTiles.delete(key);
+        this.consumedTiles.delete(key);
+
+        // Find existing tile data at this pos
+        const existingIndex = layer.tiles.findIndex(t => t.x === tx && t.y === ty);
+        if (existingIndex !== -1) {
+            layer.tiles[existingIndex].id = id.toString();
+        } else {
+            layer.tiles.push({ id: id.toString(), x: tx, y: ty });
+        }
+    }
+
     setScale(scale) {
         this.drawScale = scale;
     }

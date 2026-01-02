@@ -86,6 +86,7 @@ export class Game {
         this.onPointerUp = this.onPointerUp.bind(this);
         this.buySheep = this.buySheep.bind(this);
         this.buyCow = this.buyCow.bind(this);
+        this.buyGrass = this.buyGrass.bind(this);
         this.upgradeSpeed = this.upgradeSpeed.bind(this);
         this.restartGame = this.restartGame.bind(this);
 
@@ -108,6 +109,7 @@ export class Game {
         // Bind UI buttons
         document.getElementById('buy-sheep-btn').addEventListener('click', this.buySheep);
         document.getElementById('buy-cow-btn').addEventListener('click', this.buyCow);
+        document.getElementById('buy-grass-btn').addEventListener('click', this.buyGrass);
         document.getElementById('upgrade-speed-btn').addEventListener('click', this.upgradeSpeed);
 
         document.getElementById('confirm-purchase').addEventListener('click', this.confirmPurchase);
@@ -289,8 +291,12 @@ export class Game {
         this.pointer.lastY = clickY;
         this.pointer.isDragging = false;
 
-        if (this.placementMode === 'grassland') {
-            this.placeGrassland(clickX, clickY);
+        if (this.placementMode === 'grassland' || this.placementMode === 'grass') {
+            if (this.placementMode === 'grass') {
+                this.placeGrass(clickX, clickY);
+            } else {
+                this.placeGrassland(clickX, clickY);
+            }
             this.pointer.isDown = false; // Reset so dragging doesn't start
             return;
         }
@@ -627,6 +633,51 @@ export class Game {
         this.updateUI();
     }
 
+    buyGrass() {
+        if (this.gameState.gold >= 40) {
+            this.placementMode = 'grass';
+            this.toggleShop(false);
+            this.showNotification("اختر مكاناً لزراعة العشب 🌿");
+        } else {
+            this.showNotification("تحتاج إلى 40 ذهب! 🪙");
+        }
+        this.updateUI();
+    }
+
+    placeGrass(worldX, worldY) {
+        if (this.gameState.gold < 40) {
+            this.placementMode = null;
+            return;
+        }
+
+        const tileMap = this.world.tileMap;
+        if (!tileMap) return;
+
+        const scaledTileSize = tileMap.baseTileSize * tileMap.drawScale;
+        const worldWidth = tileMap.mapData.mapWidth * scaledTileSize;
+        const worldHeight = tileMap.mapData.mapHeight * scaledTileSize;
+        const startX = tileMap.centerX - worldWidth / 2;
+        const startY = tileMap.centerY - worldHeight / 2;
+
+        const tx = Math.floor((worldX - startX) / scaledTileSize);
+        const ty = Math.floor((worldY - startY) / scaledTileSize);
+
+        if (tx < 0 || tx >= tileMap.mapData.mapWidth || ty < 0 || ty >= tileMap.mapData.mapHeight) {
+            return;
+        }
+
+        this.gameState.gold -= 40;
+        // The user wants "full grass". Looking at map.json, ID 60 is the middle of the grass block.
+        const grassId = 60;
+        tileMap.addTile('grass', tx, ty, grassId);
+
+        this.createParticleVFX(worldX, worldY, '#4CAF50', 15);
+        this.showNotification("تمت زراعة العشب! 🌿");
+
+        this.placementMode = null;
+        this.updateUI();
+    }
+
     upgradeSpeed() {
         if (this.gameState.gold >= 100) {
             this.gameState.gold -= 100;
@@ -956,6 +1007,43 @@ export class Game {
         this.wolfList.forEach(w => w.draw(this.ctx));
         this.player.draw(this.ctx, this.gameState.time);
 
+        // Ghost grass preview
+        if (this.placementMode === 'grass') {
+            const tileMap = this.world.tileMap;
+            if (tileMap) {
+                const scaledTileSize = tileMap.baseTileSize * tileMap.drawScale;
+                const worldWidth = tileMap.mapData.mapWidth * scaledTileSize;
+                const worldHeight = tileMap.mapData.mapHeight * scaledTileSize;
+                const startX = tileMap.centerX - worldWidth / 2;
+                const startY = tileMap.centerY - worldHeight / 2;
+
+                const tx = Math.floor((this.mousePos.x - startX) / scaledTileSize);
+                const ty = Math.floor((this.mousePos.y - startY) / scaledTileSize);
+
+                const destX = startX + tx * scaledTileSize;
+                const destY = startY + ty * scaledTileSize;
+
+                this.ctx.globalAlpha = 0.5;
+                // Draw the actual sprite for "full grass"
+                const grassId = 60;
+                const columns = Math.floor(tileMap.tilesetImage.width / tileMap.baseTileSize);
+                const srcX = (grassId % columns) * tileMap.baseTileSize;
+                const srcY = Math.floor(grassId / columns) * tileMap.baseTileSize;
+
+                this.ctx.drawImage(
+                    tileMap.tilesetImage,
+                    srcX, srcY, tileMap.baseTileSize, tileMap.baseTileSize,
+                    destX, destY, scaledTileSize, scaledTileSize
+                );
+                this.ctx.globalAlpha = 1.0;
+
+                // Border
+                this.ctx.strokeStyle = '#4CAF50';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(destX, destY, scaledTileSize, scaledTileSize);
+            }
+        }
+
 
 
         // Extraction Progress Bar
@@ -1058,6 +1146,8 @@ export class Game {
 
         if (buyBtn) buyBtn.disabled = this.gameState.gold < 100;
         if (buyCowBtn) buyCowBtn.disabled = this.gameState.gold < 150;
+        const buyGrassBtn = document.getElementById('buy-grass-btn');
+        if (buyGrassBtn) buyGrassBtn.disabled = this.gameState.gold < 40;
         if (upgradeBtn && upgradeBtn.textContent !== "السرعة القصوى") {
             upgradeBtn.disabled = this.gameState.gold < 100;
         }

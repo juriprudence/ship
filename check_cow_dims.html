@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <img id="up" src="images/cow/up.png" onload="logDim('up', this)">
+    <img id="down" src="images/cow/down.png" onload="logDim('down', this)">
+    <img id="left" src="images/cow/left.png" onload="logDim('left', this)">
+    <img id="right" src="images/cow/right.png" onload="logDim('right', this)">
+    <script>
+        function logDim(name, img) {
+            console.log(name + ": " + img.naturalWidth + "x" + img.naturalHeight);
+        }
+    </script>
+</body>
+
+</html>

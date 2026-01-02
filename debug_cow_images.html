@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cow Images Debug</title>
+    <style>
+        body {
+            background-color: #333;
+            color: white;
+            font-family: monospace;
+        }
+
+        .image-container {
+            display: inline-block;
+            margin: 10px;
+            border: 1px solid #777;
+            padding: 5px;
+            text-align: center;
+        }
+
+        img {
+            border: 1px solid red;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .info {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Cow Images Debug</h1>
+    <div id="container"></div>
+    <script>
+        const images = [
+            'images/cow/down.png',
+            'images/cow/up.png',
+            'images/cow/right.png',
+            'images/cow/left.png',
+            'images/cow/cow_animation/1.png',
+            'images/cow/cow_animation/2.png',
+            'images/cow/cow_animation/3.png',
+            'images/cow/head_down/head_down.png',
+            'images/cow/head_down/head_downt.png'
+        ];
+
+        const container = document.getElementById('container');
+
+        images.forEach(src => {
+            const div = document.createElement('div');
+            div.className = 'image-container';
+
+            const img = new Image();
+            img.onload = () => {
+                const info = document.createElement('div');
+                info.className = 'info';
+                info.innerText = `${src}\n${img.naturalWidth}x${img.naturalHeight}`;
+                div.appendChild(info);
+            };
+            img.src = src;
+
+            div.appendChild(img);
+            container.appendChild(div);
+        });
+    </script>
+</body>
+
+</html>

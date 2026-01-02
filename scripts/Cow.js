@@ -10,7 +10,11 @@ const cowImages = {
     anim2: new Image(),
     anim3: new Image(),
     headDown1: new Image(),
-    headDown2: new Image()
+    headDown2: new Image(),
+    milk1: new Image(),
+    milk2: new Image(),
+    milk3: new Image(),
+    milk4: new Image()
 };
 
 let cowImagesLoaded = false;
@@ -26,6 +30,10 @@ function loadCowImages(assets) {
         cowImages.anim3 = assets.getAsset('images', 'images/cow/cow_animation/3.png');
         cowImages.headDown1 = assets.getAsset('images', 'images/cow/head_down/head_down.png');
         cowImages.headDown2 = assets.getAsset('images', 'images/cow/head_down/head_downt.png');
+        cowImages.milk1 = assets.getAsset('images', 'images/cow/milk_cow/1.png');
+        cowImages.milk2 = assets.getAsset('images', 'images/cow/milk_cow/2.png');
+        cowImages.milk3 = assets.getAsset('images', 'images/cow/milk_cow/3.png');
+        cowImages.milk4 = assets.getAsset('images', 'images/cow/milk_cow/4.png');
     } else {
         cowImages.down.src = 'images/cow/down.png';
         cowImages.up.src = 'images/cow/up.png';
@@ -36,6 +44,10 @@ function loadCowImages(assets) {
         cowImages.anim3.src = 'images/cow/cow_animation/3.png';
         cowImages.headDown1.src = 'images/cow/head_down/head_down.png';
         cowImages.headDown2.src = 'images/cow/head_down/head_downt.png';
+        cowImages.milk1.src = 'images/cow/milk_cow/1.png';
+        cowImages.milk2.src = 'images/cow/milk_cow/2.png';
+        cowImages.milk3.src = 'images/cow/milk_cow/3.png';
+        cowImages.milk4.src = 'images/cow/milk_cow/4.png';
     }
     cowImagesLoaded = true;
 }
@@ -50,6 +62,10 @@ export class Cow extends Animal {
         // Override dimensions for cow (larger than sheep)
         this.width = 100;
         this.height = 100;
+
+        // Auto milking state
+        this.autoMilkingStage = 0; // 0: idle, 1: milking (1-2 loop), 2: finishing (3-4 once)
+        this.milkingTimer = 0;
     }
 
     update(dt, player, world, cowList, trought) {
@@ -74,9 +90,37 @@ export class Cow extends Animal {
         // 4. Handle trought interaction
         this.handleTroughtInteraction(trought, inTrought);
 
-        // 5. Movement
-        if (!this.isBeingMilked) {
+        // 5. Movement & Auto-Milking
+        if (this.autoMilkingStage === 0) {
             this.updateMovement(dt, player, world, cowList, trought);
+
+            // Check if in tent for automatic milking
+            if (this.milkProduction >= 100 && world.tileMap && world.tileMap.isPositionInLayer(this.x, this.y, 'justtent')) {
+                this.autoMilkingStage = 1;
+                this.milkingTimer = 0;
+            }
+        } else if (this.autoMilkingStage === 1) {
+            // Milking stage (loop 1-2)
+            this.milkingTimer += dt;
+            if (this.milkingTimer > 3) { // 3 seconds of milking
+                this.autoMilkingStage = 2;
+                this.milkingTimer = 0;
+                this.milkProduction = 0;
+                // Signal reward
+                if (window.game) {
+                    window.game.gameState.gold += 15;
+                    window.game.showNotification("تم حلب البقرة آلياً! +15 ذهب 🥛");
+                    window.game.updateUI();
+                    if (window.game.soundManager) window.game.soundManager.playEffect('milkking');
+                }
+            }
+        } else if (this.autoMilkingStage === 2) {
+            // Finishing stage (3-4 once)
+            this.milkingTimer += dt;
+            if (this.milkingTimer > 1.5) { // 1.5 seconds for finish animation
+                this.autoMilkingStage = 0;
+                this.milkingTimer = 0;
+            }
         }
 
         // 6. Animation
@@ -108,7 +152,17 @@ export class Cow extends Animal {
         const walkSequence = [0, 1, 2, 1];
 
         // Use animation frames when moving horizontally, otherwise use directional sprites
-        if (this.isEating) {
+        if (this.autoMilkingStage === 1) {
+            // Milking animation (1-2 loop)
+            const stage1Sequence = [1, 2];
+            const frameIndex = Math.floor(Date.now() / 250) % 2; // Simple time-based toggle
+            img = stage1Sequence[frameIndex] === 1 ? cowImages.milk1 : cowImages.milk2;
+        } else if (this.autoMilkingStage === 2) {
+            // Finishing animation (3-4 sequence)
+            const stage2Sequence = [3, 4];
+            const frameIndex = Math.min(1, Math.floor(this.milkingTimer / 0.75));
+            img = stage2Sequence[frameIndex] === 3 ? cowImages.milk3 : cowImages.milk4;
+        } else if (this.isEating) {
             // Animation for eating/drinking
             const eatSequence = [0, 1];
             const frameIndex = eatSequence[this.animationFrame % eatSequence.length];

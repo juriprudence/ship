@@ -57,12 +57,6 @@ export class Game {
             active: false
         };
 
-        this.milkState = {
-            cow: null,
-            timer: 0,
-            active: false
-        };
-
         this.pointer = {
             isDown: false,
             startX: 0,
@@ -154,6 +148,10 @@ export class Game {
             'images/cow/cow_animation/3.png',
             'images/cow/head_down/head_down.png',
             'images/cow/head_down/head_downt.png',
+            'images/cow/milk_cow/1.png',
+            'images/cow/milk_cow/2.png',
+            'images/cow/milk_cow/3.png',
+            'images/cow/milk_cow/4.png',
             'images/wolf1.png',
             'images/wolf2.png',
             'scripts/maps/spritesheet.png',
@@ -381,25 +379,8 @@ export class Game {
             return;
         }
 
-        // Check for cow click (milk collection)
-        let clickedCow = false;
-        for (let c of this.cowList) {
-            const dx = c.x - clickX;
-            const dy = c.y - clickY;
-            if (dx * dx + dy * dy < 900) {
-                if (c.milkProduction >= 100) {
-                    this.startMilking(c);
-                    clickedCow = true;
-                } else {
-                    c.x += (Math.random() - 0.5) * 20;
-                    c.y += (Math.random() - 0.5) * 20;
-                }
-            }
-        }
-
-        if (clickedCow) {
-            this.pointer.isDown = false;
-        }
+        // Check for cow click (displaced as milking is now automatic in tent)
+        // No interaction needed for cows
     }
 
     onPointerMove(e) {
@@ -541,74 +522,8 @@ export class Game {
         this.player.isShearing = false;
     }
 
-    // Milk Collection Methods (same as sheep wool collection)
-    startMilking(cow) {
-        if (this.milkState.active) return;
-
-        cow.milkProduction = 0;
-        this.milkState = {
-            cow: cow,
-            timer: 0,
-            active: true,
-            hasReached: false
-        };
-
-        // Move player to cow
-        this.player.handleInput(cow.x, cow.y);
-
-        this.createParticleVFX(cow.x, cow.y, '#fff', 10);
-        this.showNotification("توجه إلى البقرة لجمع الحليب! 🚶‍♂️");
-
-        // Stop cow movement
-        cow.isBeingMilked = true;
-    }
-
-    cancelMilking(message) {
-        if (this.milkState.cow) {
-            this.milkState.cow.isBeingMilked = false;
-        }
-        this.soundManager.stopMilkingSound();
-        this.milkState.active = false;
-        this.milkState.cow = null;
-        this.player.isMilking = false;
-        this.player.isShearing = false;
-        if (message) this.showNotification(message);
-    }
-
-    completeMilking() {
-        this.gameState.gold += 15;
-        this.showNotification("+15 ذهب من الحليب! 🥛");
-
-        // Spawn gold particle animation
-        if (this.milkState.cow) {
-            const cow = this.milkState.cow;
-            const coinCount = 5;
-            for (let i = 0; i < coinCount; i++) {
-                setTimeout(() => {
-                    const offsetX = (Math.random() - 0.5) * 30;
-                    const offsetY = (Math.random() - 0.5) * 30;
-                    this.goldParticles.push(
-                        new GoldParticle(
-                            cow.x + offsetX,
-                            cow.y + offsetY,
-                            this.player.x,
-                            this.player.y
-                        )
-                    );
-                }, i * 50);
-            }
-            this.goldBursts.push(new GoldBurst(cow.x, cow.y, 8));
-        }
-
-        this.updateUI();
-        if (this.milkState.cow) {
-            this.milkState.cow.isBeingMilked = false;
-        }
-        this.soundManager.stopMilkingSound();
-        this.milkState.active = false;
-        this.milkState.cow = null;
-        this.player.isMilking = false;
-        this.player.isShearing = false;
+    shearSheep(sheep) {
+        // This old method is now replaced by startExtraction
     }
 
     shearSheep(sheep) {
@@ -815,42 +730,6 @@ export class Game {
             }
         }
 
-        // Milk Collection Logic (same as wool extraction)
-        if (this.milkState.active) {
-            const cow = this.milkState.cow;
-            const dist = Math.hypot(this.player.x - cow.x, this.player.y - cow.y);
-
-            if (!this.milkState.hasReached) {
-                this.player.targetX = cow.x;
-                this.player.targetY = cow.y;
-            }
-
-            if (dist < 20) {
-                if (!this.milkState.hasReached) {
-                    this.milkState.hasReached = true;
-                    this.showNotification("جاري جمع الحليب... اثبت مكانك! ⏳");
-                    this.player.isMilking = true;
-                    this.player.isShearing = true;
-                    this.soundManager.startMilkingSound();
-                }
-                this.milkState.timer += dt;
-
-                this.player.x = cow.x;
-                this.player.y = cow.y;
-                this.player.targetX = cow.x;
-                this.player.targetY = cow.y;
-                this.player.isMoving = false;
-
-            } else if (this.milkState.hasReached && dist > 40) {
-                this.cancelMilking("ابتعدت كثيراً! تم إلغاء جمع الحليب ❌");
-            } else if (dist > 350 && !this.milkState.hasReached) {
-                this.cancelMilking("البقرة بعيدة جداً! ❌");
-            }
-
-            if (this.milkState.timer >= 5) {
-                this.completeMilking();
-            }
-        }
 
         const worldEvent = this.world.update(dt, this.player.x, this.player.y, this.gameState.day);
         if (worldEvent.respawned) {
@@ -1063,20 +942,6 @@ export class Game {
             this.ctx.fillRect(px, py, barWidth * progress, barHeight);
         }
 
-        // Milk Collection Progress Bar
-        if (this.milkState.active) {
-            const barWidth = 40;
-            const barHeight = 6;
-            const px = this.player.x - barWidth / 2;
-            const py = this.player.y - 70;
-
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            this.ctx.fillRect(px, py, barWidth, barHeight);
-
-            const progress = Math.min(this.milkState.timer / 5, 1);
-            this.ctx.fillStyle = '#fff'; // White for milk
-            this.ctx.fillRect(px, py, barWidth * progress, barHeight);
-        }
 
         // VFX
         this.particles.forEach(p => p.draw(this.ctx));

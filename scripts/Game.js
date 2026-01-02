@@ -63,9 +63,10 @@ export class Game {
             startY: 0,
             isDragging: false,
             dragThreshold: 15,
-            lastX: 0,
             lastY: 0
         };
+
+        this.isTentOccupied = false;
 
         this.wolfRespawnQueue = [];
 

@@ -74,7 +74,14 @@ export class Cow extends Animal {
 
         // 2. Core animal needs (thirst, hunger, death check)
         const deathResult = this.updateCore(dt);
-        if (deathResult) return deathResult;
+        if (deathResult) {
+            // Ensure tent occupancy is reset if cow dies while milking
+            if ((this.autoMilkingStage === 1 || this.autoMilkingStage === 2) && window.game) {
+                window.game.isTentOccupied = false;
+                if (window.game.soundManager) window.game.soundManager.stopMilkingSound();
+            }
+            return deathResult;
+        }
 
         // --- Environment Checks ---
         const distToOasis = Math.hypot(this.x - world.oasis.x, this.y - world.oasis.y);
@@ -92,13 +99,24 @@ export class Cow extends Animal {
 
         // 5. Movement & Auto-Milking
         if (this.autoMilkingStage === 0) {
-            this.updateMovement(dt, player, world, cowList, trought);
-
             // Check if in tent for automatic milking
-            if (this.milkProduction >= 100 && world.tileMap && world.tileMap.isPositionInLayer(this.x, this.y, 'justtent')) {
-                this.autoMilkingStage = 1;
-                this.milkingTimer = 0;
-                if (window.game && window.game.soundManager) window.game.soundManager.startMilkingSound();
+            const inTent = this.milkProduction >= 100 && world.tileMap && world.tileMap.isPositionInLayer(this.x, this.y, 'justtent');
+
+            if (inTent) {
+                // If tent is occupied, wait (stop moving)
+                if (window.game && window.game.isTentOccupied) {
+                    this.isMoving = false;
+                } else {
+                    // Start milking
+                    this.autoMilkingStage = 1;
+                    this.milkingTimer = 0;
+                    if (window.game) {
+                        window.game.isTentOccupied = true;
+                        if (window.game.soundManager) window.game.soundManager.startMilkingSound();
+                    }
+                }
+            } else {
+                this.updateMovement(dt, player, world, cowList, trought);
             }
         } else if (this.autoMilkingStage === 1) {
             // Milking stage (loop 1-2)
@@ -121,6 +139,7 @@ export class Cow extends Animal {
             if (this.milkingTimer > 1.5) { // 1.5 seconds for finish animation
                 this.autoMilkingStage = 0;
                 this.milkingTimer = 0;
+                if (window.game) window.game.isTentOccupied = false;
             }
         }
 
@@ -220,7 +239,8 @@ export class Cow extends Animal {
     serialize() {
         return {
             ...super.serialize(),
-            milkProduction: this.milkProduction
+            milkProduction: this.milkProduction,
+            autoMilkingStage: this.autoMilkingStage
         };
     }
 
@@ -228,6 +248,9 @@ export class Cow extends Animal {
         super.deserialize(data);
         if (data) {
             this.milkProduction = data.milkProduction;
+            // Best to reset milking stage on load to avoid global flag drift
+            this.autoMilkingStage = 0;
+            this.milkingTimer = 0;
         }
     }
 }

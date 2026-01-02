@@ -98,6 +98,7 @@ export class Cow extends Animal {
             if (this.milkProduction >= 100 && world.tileMap && world.tileMap.isPositionInLayer(this.x, this.y, 'justtent')) {
                 this.autoMilkingStage = 1;
                 this.milkingTimer = 0;
+                if (window.game && window.game.soundManager) window.game.soundManager.startMilkingSound();
             }
         } else if (this.autoMilkingStage === 1) {
             // Milking stage (loop 1-2)
@@ -111,7 +112,7 @@ export class Cow extends Animal {
                     window.game.gameState.gold += 15;
                     window.game.showNotification("تم حلب البقرة آلياً! +15 ذهب 🥛");
                     window.game.updateUI();
-                    if (window.game.soundManager) window.game.soundManager.playEffect('milkking');
+                    if (window.game.soundManager) window.game.soundManager.stopMilkingSound();
                 }
             }
         } else if (this.autoMilkingStage === 2) {

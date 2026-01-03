@@ -242,7 +242,7 @@ export class Game {
         // Initial Spawn
         for (let i = 0; i < 2; i++) this.spawnSheep();
         this.spawnCow();
-        for (let i = 0; i < 5; i++) this.wolfList.push(new Wolf(this.loader));
+        for (let i = 0; i < 5; i++) this.spawnWolf();
 
         requestAnimationFrame(this.gameLoop);
     }
@@ -275,6 +275,19 @@ export class Game {
         if (this.cowList.length >= this.MAX_COW) return;
         this.cowList.push(new Cow(this.player.x, this.player.y, this.loader));
         this.updateUI();
+    }
+
+    spawnWolf() {
+        let pos = { x: (Math.random() * 2000 - 1000), y: (Math.random() * 2000 - 1000) };
+
+        if (this.world && this.world.tileMap) {
+            const safePos = this.world.tileMap.getRandomSafePositionInLayer('baze', 'montnghe');
+            if (safePos) {
+                pos = safePos;
+            }
+        }
+
+        this.wolfList.push(new Wolf(this.loader, pos.x, pos.y));
     }
 
     onPointerDown(e) {
@@ -651,7 +664,7 @@ export class Game {
         // Spawn Initial Sheep
         for (let i = 0; i < 2; i++) this.spawnSheep();
         this.spawnCow();
-        for (let i = 0; i < 5; i++) this.wolfList.push(new Wolf(this.loader));
+        for (let i = 0; i < 5; i++) this.spawnWolf();
 
         this.updateUI();
 
@@ -850,13 +863,14 @@ export class Game {
         this.cowList = survivingCows;
 
         // Wolf Respawn Logic
-        for (let i = this.wolfRespawnQueue.length - 1; i >= 0; i--) {
-            this.wolfRespawnQueue[i].timer -= dt;
-            if (this.wolfRespawnQueue[i].timer <= 0) {
-                this.wolfList.push(new Wolf(this.loader));
-                this.wolfRespawnQueue.splice(i, 1);
+        this.wolfRespawnQueue = this.wolfRespawnQueue.filter(q => {
+            q.timer -= dt;
+            if (q.timer <= 0) {
+                this.spawnWolf();
+                return false;
             }
-        }
+            return true;
+        });
 
         // Particles
         this.particles = this.particles.filter(p => p.life > 0);

@@ -1,7 +1,7 @@
 export class Wolf {
-    constructor(assets) {
-        this.x = (Math.random() * 2000 - 1000);
-        this.y = (Math.random() * 2000 - 1000);
+    constructor(assets, startX, startY) {
+        this.x = startX ?? (Math.random() * 2000 - 1000);
+        this.y = startY ?? (Math.random() * 2000 - 1000);
 
         if (assets) {
             this.frames = [

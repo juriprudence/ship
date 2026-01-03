@@ -135,6 +135,33 @@ export class TileMap {
         return nearestTile;
     }
 
+    getRandomSafePositionInLayer(targetLayerName, collisionLayerName) {
+        const targetLayer = this.mapData.layers.find(l => l.name === targetLayerName);
+        if (!targetLayer || !targetLayer.tiles || targetLayer.tiles.length === 0) return null;
+
+        const collisionLayer = this.mapData.layers.find(l => l.name === collisionLayerName);
+        const collisionSet = new Set();
+        if (collisionLayer && collisionLayer.tiles) {
+            collisionLayer.tiles.forEach(t => collisionSet.add(`${t.x},${t.y}`));
+        }
+
+        const safeTiles = targetLayer.tiles.filter(t => !collisionSet.has(`${t.x},${t.y}`));
+        if (safeTiles.length === 0) return null;
+
+        const tile = safeTiles[Math.floor(Math.random() * safeTiles.length)];
+
+        const scaledTileSize = this.baseTileSize * this.drawScale;
+        const worldWidth = this.mapData.mapWidth * scaledTileSize;
+        const worldHeight = this.mapData.mapHeight * scaledTileSize;
+        const startX = this.centerX - worldWidth / 2;
+        const startY = this.centerY - worldHeight / 2;
+
+        return {
+            x: startX + tile.x * scaledTileSize + scaledTileSize / 2,
+            y: startY + tile.y * scaledTileSize + scaledTileSize / 2
+        };
+    }
+
     isCollision(worldX, worldY) {
         return this.isPositionInLayer(worldX, worldY, 'montnghe');
     }

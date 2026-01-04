@@ -2,7 +2,9 @@ import { Player } from './Player.js';
 import { World } from './World.js';
 import { Sheep } from './Sheep.js';
 import { Cow } from './Cow.js';
-import { Particle, Ripple, DustParticle } from './Utils.js';
+import { Particle, Ripple, DustParticle, FloatingText } from './Utils.js';
+
+
 import { Trought } from './Trought.js';
 import { SoundManager } from './SoundManager.js';
 import { Wolf } from './Wolf.js';
@@ -24,8 +26,12 @@ export class Game {
             day: 1,
             time: 0,
             gameActive: true,
-            lastTime: 0
+            lastTime: 0,
+            xp: 0,
+            level: 1,
+            xpToNextLevel: 100
         };
+
 
         this.camera = { x: 0, y: 0 };
 
@@ -45,6 +51,13 @@ export class Game {
         this.ripples = [];
         this.goldParticles = [];
         this.goldBursts = [];
+        this.floatingTexts = [];
+
+        this.screenshake = {
+            duration: 0,
+            intensity: 0
+        };
+
 
         this.gameStarted = false;
 
@@ -295,7 +308,12 @@ export class Game {
         }
 
         this.wolfList.push(new Wolf(this.loader, pos.x, pos.y));
+        this.soundManager.playEffect('hit'); // Placeholder, maybe use a specific 'howl' if available
+        // Actually since I don't have a howl.mp3, I'll use a notification or just 'hit' for now.
+        // I'll assume 'hit' is okay for now, or just notification.
+        this.showNotification("سمعت عواء ذئب في الأفق... 🐺");
     }
+
 
     onPointerDown(e) {
         if (!this.assetsReady) return;
@@ -368,6 +386,18 @@ export class Game {
                         this.showNotification("لقد قتلت الذئب! ⚔️");
                         this.soundManager.playEffect('hit');
                         this.createParticleVFX(clickedWolf.x, clickedWolf.y, '#f00', 20);
+                        this.triggerScreenshake(0.3, 10);
+                        this.addXP(25);
+                        this.addFloatingText(clickedWolf.x, clickedWolf.y, "قتلت الذئب! +25 XP", "#ff0", 25);
+
+                        // Wolf Loot Drop (30% chance)
+                        if (Math.random() < 0.3) {
+                            const bonusGold = 50;
+                            this.gameState.gold += bonusGold;
+                            this.addFloatingText(clickedWolf.x, clickedWolf.y - 30, `+${bonusGold} Gold (فرو ذئب)`, "#ffd700", 22);
+                        }
+
+
 
                         // Add to respawn queue
                         this.wolfRespawnQueue.push({ timer: 5 });
@@ -507,14 +537,33 @@ export class Game {
 
     completeExtraction() {
         this.gameState.woolCount++;
-        this.gameState.gold += 10;
-        this.showNotification("+10 ذهب 🪙");
+        // rewards handled below
+
 
         // Spawn gold particle animation
         if (this.extractionState.sheep) {
             const sheep = this.extractionState.sheep;
+            let goldReward = 10;
+            let xpReward = 10;
+            let rewardText = "+10 Gold";
+            let rewardColor = "#ffd700";
+
+            if (sheep.isGolden) {
+                goldReward = 30;
+                xpReward = 30;
+                rewardText = "GOLDEN WOOL! +30 Gold";
+                rewardColor = "#ffcc00";
+                this.triggerScreenshake(0.2, 5);
+                this.createParticleVFX(sheep.x, sheep.y, "#ffcc00", 20);
+            }
+
+            this.gameState.gold += goldReward;
+            this.addXP(xpReward);
+            this.addFloatingText(sheep.x, sheep.y, rewardText, rewardColor, sheep.isGolden ? 30 : 24);
+
             // Create multiple gold coins
-            const coinCount = 5;
+            const coinCount = sheep.isGolden ? 15 : 5;
+
             for (let i = 0; i < coinCount; i++) {
                 setTimeout(() => {
                     const offsetX = (Math.random() - 0.5) * 30;
@@ -773,6 +822,14 @@ export class Game {
         this.camera.x += (targetCamX - this.camera.x) * 5 * dt;
         this.camera.y += (targetCamY - this.camera.y) * 5 * dt;
 
+        // Apply screenshake
+        if (this.screenshake.duration > 0) {
+            this.screenshake.duration -= dt;
+            this.camera.x += (Math.random() - 0.5) * this.screenshake.intensity;
+            this.camera.y += (Math.random() - 0.5) * this.screenshake.intensity;
+        }
+
+
 
 
         // Sheep Logic
@@ -897,7 +954,12 @@ export class Game {
         // Gold Particles
         this.goldParticles = this.goldParticles.filter(p => p.update(dt));
         this.goldBursts = this.goldBursts.filter(b => b.update(dt));
+
+        // Floating Texts
+        this.floatingTexts = this.floatingTexts.filter(t => t.life > 0);
+        this.floatingTexts.forEach(t => t.update(dt));
     }
+
 
     draw() {
         // Clear
@@ -977,6 +1039,8 @@ export class Game {
         this.ripples.forEach(r => r.draw(this.ctx));
         this.goldParticles.forEach(p => p.draw(this.ctx));
         this.goldBursts.forEach(b => b.draw(this.ctx));
+        this.floatingTexts.forEach(t => t.draw(this.ctx));
+
 
         // Night Overlay
         const dayProgress = this.gameState.time % 10;
@@ -985,9 +1049,22 @@ export class Game {
             darkness = (dayProgress - 7) / 3 * 0.6;
         }
         if (darkness > 0) {
-            this.ctx.fillStyle = `rgba(0, 10, 40, ${darkness})`;
             this.ctx.fillRect(this.camera.x, this.camera.y, this.canvas.width, this.canvas.height);
         }
+
+        // Red Vigilante (Loss Aversion)
+        const anyWolfAttacking = this.wolfList.some(w => w.state === 'attack');
+        if (anyWolfAttacking) {
+            const gradient = this.ctx.createRadialGradient(
+                this.camera.x + this.canvas.width / 2, this.camera.y + this.canvas.height / 2, this.canvas.width / 4,
+                this.camera.x + this.canvas.width / 2, this.camera.y + this.canvas.height / 2, this.canvas.width
+            );
+            gradient.addColorStop(0, 'rgba(255, 0, 0, 0)');
+            gradient.addColorStop(1, 'rgba(255, 0, 0, 0.3)');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(this.camera.x, this.camera.y, this.canvas.width, this.canvas.height);
+        }
+
 
         this.ctx.restore();
     }
@@ -1013,6 +1090,39 @@ export class Game {
     createRippleVFX(x, y) {
         this.ripples.push(new Ripple(x, y));
     }
+
+    addXP(amount) {
+        this.gameState.xp += amount;
+        if (this.gameState.xp >= this.gameState.xpToNextLevel) {
+            this.levelUp();
+        }
+        this.updateUI();
+    }
+
+    levelUp() {
+        this.gameState.level++;
+        this.gameState.xp -= this.gameState.xpToNextLevel;
+        this.gameState.xpToNextLevel = Math.floor(this.gameState.xpToNextLevel * 1.5);
+
+        this.showNotification(`مستوى جديد! مستوى ${this.gameState.level} 🌟`);
+        this.soundManager.playEffect('hit'); // Placeholder for level-up sound
+        this.triggerScreenshake(0.5, 15);
+        this.createParticleVFX(this.player.x, this.player.y, '#ffd700', 30);
+        this.addFloatingText(this.player.x, this.player.y - 40, "LEVEL UP!", "#fff", 40);
+
+        // Reward: Speed boost
+        this.player.speed += 10;
+    }
+
+    addFloatingText(x, y, text, color, size) {
+        this.floatingTexts.push(new FloatingText(x, y, text, color, size));
+    }
+
+    triggerScreenshake(duration, intensity) {
+        this.screenshake.duration = duration;
+        this.screenshake.intensity = intensity;
+    }
+
 
     // UI Helpers
     showNotification(text) {
@@ -1045,7 +1155,19 @@ export class Game {
         if (upgradeBtn && upgradeBtn.textContent !== "السرعة القصوى") {
             upgradeBtn.disabled = this.gameState.gold < 100;
         }
+
+        // Update XP UI
+        const xpBar = document.getElementById('xp-bar');
+        const levelDisplay = document.getElementById('level-display');
+        if (xpBar) {
+            const progress = (this.gameState.xp / this.gameState.xpToNextLevel) * 100;
+            xpBar.style.width = `${progress}%`;
+        }
+        if (levelDisplay) {
+            levelDisplay.textContent = this.gameState.level;
+        }
     }
+
 
     // Save/Load Methods
     saveGame() {

@@ -65,6 +65,7 @@ export class Ripple {
         ctx.globalAlpha = 1;
     }
 }
+
 export class DustParticle {
     constructor(x, y) {
         this.x = x + (Math.random() - 0.5) * 10;
@@ -95,5 +96,31 @@ export class DustParticle {
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1.0;
+    }
+}
+
+export class FloatingText {
+    constructor(x, y, text, color = '#fff', size = 20) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.color = color;
+        this.size = size;
+        this.life = 1.0;
+        this.vy = -30; // Float upwards
+    }
+
+    update(dt) {
+        this.y += this.vy * dt;
+        this.life -= dt;
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.font = `bold ${this.size}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.globalAlpha = 1;
     }
 }

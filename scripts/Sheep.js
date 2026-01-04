@@ -58,7 +58,9 @@ export class Sheep extends Animal {
 
         this.lifeState = 'alive'; // 'alive' or 'dying'
         this.deathStage = 0; // 0 to 3
+        this.isGolden = false;
     }
+
 
     die() {
         if (this.lifeState === 'dying') return;
@@ -78,7 +80,14 @@ export class Sheep extends Animal {
         }
 
         // 1. Wool Growth
-        if (this.woolGrowth < 100) this.woolGrowth += dt * 5;
+        if (this.woolGrowth < 100) {
+            this.woolGrowth += dt * 5;
+            if (this.woolGrowth >= 100) {
+                // 10% chance to become golden when wool is fully grown
+                this.isGolden = Math.random() < 0.1;
+            }
+        }
+
 
         // 2. Core animal needs (thirst, hunger, death check)
         const deathResult = this.updateCore(dt);
@@ -127,11 +136,21 @@ export class Sheep extends Animal {
 
         // Visual indicator for wool readiness
         if (this.woolGrowth >= 100) {
-            ctx.shadowColor = "white";
-            ctx.shadowBlur = 10;
+            if (this.isGolden) {
+                ctx.shadowColor = "#ffd700";
+                ctx.shadowBlur = 20;
+                // Add sparkle particles occasionally
+                if (Math.random() < 0.1) {
+                    this.triggerSparkle = true;
+                }
+            } else {
+                ctx.shadowColor = "white";
+                ctx.shadowBlur = 10;
+            }
         } else {
             ctx.shadowBlur = 0;
         }
+
 
         // Draw Sprite
         let img = sheepImages[this.facing];
@@ -172,8 +191,10 @@ export class Sheep extends Animal {
             ...super.serialize(),
             woolGrowth: this.woolGrowth,
             lifeState: this.lifeState,
-            deathStage: this.deathStage
+            deathStage: this.deathStage,
+            isGolden: this.isGolden
         };
+
     }
 
     deserialize(data) {
@@ -182,6 +203,8 @@ export class Sheep extends Animal {
             this.woolGrowth = data.woolGrowth;
             this.lifeState = data.lifeState || 'alive';
             this.deathStage = data.deathStage || 0;
+            this.isGolden = data.isGolden || false;
         }
+
     }
 }

@@ -429,7 +429,14 @@
                 <div class="resource">🐑 <span id="sheep-display">0</span></div>
                 <div class="resource">🐄 <span id="cow-display">0</span></div>
                 <div class="resource">🧶 <span id="wool-display">0</span></div>
+                <div class="resource">🌟 <span id="level-display">1</span></div>
+                <div
+                    style="width: 100px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,0,0.3); margin-right: 5px;">
+                    <div id="xp-bar" style="width: 0%; height: 100%; background: #4CAF50; transition: width 0.3s;">
+                    </div>
+                </div>
             </div>
+
             <div class="save-load-buttons">
                 <button class="save-btn" id="save-game-btn" onclick="window.game.saveGame()">💾 حفظ</button>
                 <button class="load-btn" id="load-game-btn" onclick="window.game.loadGame()">📂 تحميل</button>

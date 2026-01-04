@@ -244,9 +244,12 @@ export class Game {
         document.getElementById('start-screen').style.display = 'none';
 
         // Initial Spawn
+        if (this.world && this.world.tileMap) {
+            this.world.tileMap.resetConsumedTiles();
+        }
         for (let i = 0; i < 2; i++) this.spawnSheep();
         this.spawnCow();
-        for (let i = 0; i < 5; i++) this.spawnWolf();
+        for (let i = 0; i < 2; i++) this.spawnWolf();
 
         requestAnimationFrame(this.gameLoop);
     }
@@ -642,6 +645,9 @@ export class Game {
 
     restartGame() {
         // Reset Game State
+        if (this.world && this.world.tileMap) {
+            this.world.tileMap.resetConsumedTiles();
+        }
         this.gameState = {
             gold: 0,
             woolCount: 0,
@@ -668,7 +674,7 @@ export class Game {
         // Spawn Initial Sheep
         for (let i = 0; i < 2; i++) this.spawnSheep();
         this.spawnCow();
-        for (let i = 0; i < 5; i++) this.spawnWolf();
+        for (let i = 0; i < 2; i++) this.spawnWolf();
 
         this.updateUI();
 

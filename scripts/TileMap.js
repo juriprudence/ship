@@ -210,6 +210,11 @@ export class TileMap {
         }
         ctx.imageSmoothingEnabled = originalSmoothing;
     }
+    resetConsumedTiles() {
+        this.consumedTiles.clear();
+        this.hiddenTiles.clear();
+    }
+
     serialize() {
         return {
             consumedTiles: Array.from(this.consumedTiles.entries()),

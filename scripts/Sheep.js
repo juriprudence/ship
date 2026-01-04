@@ -6,7 +6,8 @@ const sheepImages = {
     up: new Image(),
     right: new Image(),
     walk: [new Image(), new Image(), new Image(), new Image()], // 4 frames for walk animation
-    eat: [new Image(), new Image()] // 2 frames for eating/drinking animation
+    eat: [new Image(), new Image()], // 2 frames for eating/drinking animation
+    die: [new Image(), new Image(), new Image(), new Image()] // 4 frames for death animation/stages
 };
 
 let sheepImagesLoaded = false;
@@ -22,6 +23,10 @@ function loadSheepImages(assets) {
         sheepImages.walk[3] = assets.getAsset('images', 'images/sheep/walk_3.png');
         sheepImages.eat[0] = assets.getAsset('images', 'images/sheep/head_down/eat (1).png');
         sheepImages.eat[1] = assets.getAsset('images', 'images/sheep/head_down/eat (2).png');
+        sheepImages.die[0] = assets.getAsset('images', 'images/sheep/sheep_die/1.png');
+        sheepImages.die[1] = assets.getAsset('images', 'images/sheep/sheep_die/2.png');
+        sheepImages.die[2] = assets.getAsset('images', 'images/sheep/sheep_die/3.png');
+        sheepImages.die[3] = assets.getAsset('images', 'images/sheep/sheep_die/4.png');
     } else {
         sheepImages.down.src = 'images/sheep/down.png';
         sheepImages.up.src = 'images/sheep/up.png';
@@ -32,6 +37,10 @@ function loadSheepImages(assets) {
         sheepImages.walk[3].src = 'images/sheep/walk_3.png';  // Frame 3
         sheepImages.eat[0].src = 'images/sheep/head_down/eat (1).png';
         sheepImages.eat[1].src = 'images/sheep/head_down/eat (2).png';
+        sheepImages.die[0].src = 'images/sheep/sheep_die/1.png';
+        sheepImages.die[1].src = 'images/sheep/sheep_die/2.png';
+        sheepImages.die[2].src = 'images/sheep/sheep_die/3.png';
+        sheepImages.die[3].src = 'images/sheep/sheep_die/4.png';
     }
     sheepImagesLoaded = true;
 }
@@ -46,9 +55,28 @@ export class Sheep extends Animal {
         // Override dimensions for sheep
         this.width = 80;
         this.height = 80;
+
+        this.lifeState = 'alive'; // 'alive' or 'dying'
+        this.deathStage = 0; // 0 to 3
+    }
+
+    die() {
+        if (this.lifeState === 'dying') return;
+        this.lifeState = 'dying';
+        this.deathStage = 0;
+        this.state = 'idle';
+        this.isMoving = false;
+        this.isEating = false;
     }
 
     update(dt, player, world, sheepList, trought) {
+        if (this.lifeState === 'dying') {
+            if (this.deathStage >= 4) {
+                return { finished: true };
+            }
+            return null;
+        }
+
         // 1. Wool Growth
         if (this.woolGrowth < 100) this.woolGrowth += dt * 5;
 
@@ -87,6 +115,15 @@ export class Sheep extends Animal {
         ctx.beginPath();
         ctx.ellipse(this.x, this.y + 10, 20, 8, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        if (this.lifeState === 'dying') {
+            const stage = Math.min(3, Math.floor(this.deathStage));
+            const img = sheepImages.die[stage];
+            if (img && img.complete) {
+                ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+            }
+            return;
+        }
 
         // Visual indicator for wool readiness
         if (this.woolGrowth >= 100) {
@@ -133,7 +170,9 @@ export class Sheep extends Animal {
     serialize() {
         return {
             ...super.serialize(),
-            woolGrowth: this.woolGrowth
+            woolGrowth: this.woolGrowth,
+            lifeState: this.lifeState,
+            deathStage: this.deathStage
         };
     }
 
@@ -141,6 +180,8 @@ export class Sheep extends Animal {
         super.deserialize(data);
         if (data) {
             this.woolGrowth = data.woolGrowth;
+            this.lifeState = data.lifeState || 'alive';
+            this.deathStage = data.deathStage || 0;
         }
     }
 }

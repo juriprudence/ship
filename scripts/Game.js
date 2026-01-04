@@ -139,6 +139,10 @@ export class Game {
             'images/sheep/walk_3.png',
             'images/sheep/head_down/eat (1).png',
             'images/sheep/head_down/eat (2).png',
+            'images/sheep/sheep_die/1.png',
+            'images/sheep/sheep_die/2.png',
+            'images/sheep/sheep_die/3.png',
+            'images/sheep/sheep_die/4.png',
             'images/cow/down.png',
             'images/cow/up.png',
             'images/cow/left.png',
@@ -774,6 +778,9 @@ export class Game {
                 this.showNotification(`مات خروف من ${event.cause}! 💀`);
                 this.soundManager.playEffect('daying_sheep');
                 this.updateUI();
+            } else if (event && event.finished) {
+                // Fully consumed by wolf
+                this.updateUI();
             } else {
                 survivingSheep.push(s);
                 if (s.isEating && s.isVisible(this.camera, this.canvas.width, this.canvas.height)) {
@@ -831,8 +838,9 @@ export class Game {
         // Update Sound
         this.soundManager.updateGrassEating(anyoneEatingOnScreen);
 
-        // Game Over Check
-        if (this.sheepList.length === 0 && this.gameState.gameActive) {
+        // Game Over Check: End if no ALIVE sheep remain
+        const aliveSheepCount = this.sheepList.filter(s => s.lifeState === 'alive').length;
+        if (aliveSheepCount === 0 && this.gameState.gameActive) {
             this.triggerGameOver();
         }
 

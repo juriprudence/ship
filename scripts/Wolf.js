@@ -90,6 +90,26 @@ export class Wolf {
             this.flee(player.x, player.y);
         }
 
+        // --- Search for nearby carcass if not currently attacking or fleeing ---
+        if (this.state !== 'flee' && this.state !== 'attack' && this.state !== 'eating') {
+            let nearestCarcass = null;
+            let minCarcassDist = Infinity;
+            sheepList.forEach(s => {
+                if (s.lifeState === 'dying' && s.deathStage < 4) {
+                    const d = Math.hypot(this.x - s.x, this.y - s.y);
+                    if (d < 500 && d < minCarcassDist) {
+                        minCarcassDist = d;
+                        nearestCarcass = s;
+                    }
+                }
+            });
+
+            if (nearestCarcass) {
+                this.state = 'eating';
+                this.targetSheep = nearestCarcass;
+            }
+        }
+
         if (this.state === 'flee') {
             this.fleeTimer -= dt;
             if (this.fleeTimer <= 0) {
@@ -99,6 +119,24 @@ export class Wolf {
                 moveX = Math.cos(angle);
                 moveY = Math.sin(angle);
                 currentSpeed = 150; // Run away fast
+            }
+        } else if (this.state === 'eating') {
+            if (!this.targetSheep || this.targetSheep.lifeState !== 'dying' || this.targetSheep.deathStage >= 4) {
+                this.state = 'follow';
+                this.targetSheep = null;
+            } else {
+                const distToCarcass = Math.hypot(this.x - this.targetSheep.x, this.y - this.targetSheep.y);
+                if (distToCarcass > 10) {
+                    const angle = Math.atan2(this.targetSheep.y - this.y, this.targetSheep.x - this.x);
+                    moveX = Math.cos(angle);
+                    moveY = Math.sin(angle);
+                    currentSpeed = 50;
+                } else {
+                    // Arrived at carcass
+                    moveX = 0;
+                    moveY = 0;
+                    this.targetSheep.deathStage += dt * 0.08; // Eat the sheep over ~50 seconds (4 stages)
+                }
             }
         } else if (isIsolated || inPack) {
             this.state = 'attack';
@@ -115,11 +153,10 @@ export class Wolf {
 
                 // Notify world through Game.js return
                 if (nearestSheep.wolfHits >= 5) {
-                    const index = sheepList.indexOf(nearestSheep);
-                    if (index > -1) {
-                        sheepList.splice(index, 1);
-                        return { kill: true, message: "the wolf eat the sheep" };
-                    }
+                    nearestSheep.die();
+                    this.state = 'eating';
+                    this.targetSheep = nearestSheep;
+                    return { kill: true, message: "the wolf eat the sheep" };
                 } else {
                     return { hit: true };
                 }

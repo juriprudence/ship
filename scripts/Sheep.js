@@ -118,6 +118,7 @@ export class Sheep extends Animal {
     }
 
     draw(ctx) {
+        ctx.save();
         // Shadow (Rendered before sprite for natural layering)
         ctx.shadowBlur = 0;
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -131,6 +132,7 @@ export class Sheep extends Animal {
             if (img && img.complete) {
                 ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
             }
+            ctx.restore();
             return;
         }
 
@@ -184,6 +186,7 @@ export class Sheep extends Animal {
 
         // Draw status bars
         this.drawStatusBars(ctx);
+        ctx.restore();
     }
 
     serialize() {

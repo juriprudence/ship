@@ -11,6 +11,7 @@ import { Wolf } from './Wolf.js';
 import { AssetLoader } from './AssetLoader.js';
 import { SaveSystem } from './SaveSystem.js';
 import { GoldParticle, GoldBurst } from './GoldParticle.js';
+import { translations } from './translations.js';
 
 export class Game {
     constructor() {
@@ -31,6 +32,8 @@ export class Game {
             level: 1,
             xpToNextLevel: 100
         };
+
+        this.currentLanguage = 'en'; // Default
 
 
         this.camera = { x: 0, y: 0 };
@@ -105,6 +108,7 @@ export class Game {
         this.toggleShop = this.toggleShop.bind(this);
         this.showAd = this.showAd.bind(this);
         this.handleAdReward = this.handleAdReward.bind(this);
+        this.setLanguage = this.setLanguage.bind(this);
     }
 
     init() {
@@ -145,7 +149,46 @@ export class Game {
 
         // Sound toggle binding - moved soundManager initialization to after assets ready
 
+        // We don't preload here anymore, we wait for language selection
+        // Actually, we can preload while language selection is shown if we want, 
+        // but let's keep it simple and wait for lang selection or just start preload.
         this.preloadAssets();
+    }
+
+    setLanguage(lang) {
+        this.currentLanguage = lang;
+        const t = translations[lang];
+
+        document.documentElement.lang = lang;
+        document.documentElement.dir = t.dir;
+
+        // Update all elements with data-i18n
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (t[key]) {
+                // If it has a span or specific structure we might need to be careful,
+                // but for most it's simple text.
+                // For elements with emojis we might want to preserve them if they aren't in translation.
+                // But I've included emojis in translations.js
+                el.innerText = t[key];
+            }
+        });
+
+        // Special handling for elements with buttons/icons inside
+        const shopBtnText = document.querySelector('.shop-btn-text');
+        if (shopBtnText) shopBtnText.innerText = t.shop;
+
+        // Hide language selection, show start screen (which might still be loading)
+        document.getElementById('language-selection').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+    }
+
+    t(key, params = {}) {
+        let text = translations[this.currentLanguage][key] || key;
+        for (const [pKey, pVal] of Object.entries(params)) {
+            text = text.replace(`{${pKey}}`, pVal);
+        }
+        return text;
     }
 
     async preloadAssets() {
@@ -214,12 +257,12 @@ export class Game {
         this.loader.onProgress = (progress) => {
             const percentage = Math.round(progress * 100);
             if (progressBar) progressBar.style.width = `${percentage}%`;
-            if (statusText) statusText.textContent = `جاري تحميل الموارد... ${percentage}%`;
+            if (statusText) statusText.textContent = `${this.t('loadingAssets')} ${percentage}%`;
         };
 
         this.loader.onComplete = () => {
             this.assetsReady = true;
-            if (statusText) statusText.textContent = 'تم تحميل جميع الموارد بنجاح! 📦';
+            if (statusText) statusText.textContent = this.t('assetsReady');
             if (startBtn) {
                 startBtn.disabled = false;
                 startBtn.classList.add('ready');
@@ -261,7 +304,7 @@ export class Game {
             ]);
         } catch (e) {
             console.error("Asset loading failed", e);
-            if (statusText) statusText.textContent = 'فشل تحميل بعض الموارد. حاول تحديث الصفحة.';
+            if (statusText) statusText.textContent = this.t('loadingFailed');
         }
     }
 
@@ -270,6 +313,7 @@ export class Game {
 
         this.gameStarted = true;
         document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('open-shop-btn').style.display = 'flex';
 
         // Initial Spawn
         if (this.world && this.world.tileMap) {
@@ -311,17 +355,16 @@ export class Game {
             const adBtn = document.getElementById('show-ad-btn');
             if (adBtn) adBtn.style.display = 'none';
         } else {
-            this.showNotification("نظام الإعلانات غير متوفر حالياً ❌");
+            this.showNotification(this.t('adNotAvailable'));
         }
     }
 
     handleAdReward() {
-        const rewardAmount = 300;
         this.gameState.gold += rewardAmount;
         this.updateUI();
 
         // Visual and audio feedback
-        this.showNotification(`لقد حصلت على ${rewardAmount} 🪙! 🎁`);
+        this.showNotification(this.t('getReward', { amount: rewardAmount }));
         this.soundManager.playEffect('hit'); // Success sound
         this.triggerScreenshake(0.3, 10);
 
@@ -379,7 +422,7 @@ export class Game {
         this.soundManager.playEffect('hit'); // Placeholder, maybe use a specific 'howl' if available
         // Actually since I don't have a howl.mp3, I'll use a notification or just 'hit' for now.
         // I'll assume 'hit' is okay for now, or just notification.
-        this.showNotification("سمعت عواء ذئب في الأفق... 🐺");
+        this.showNotification(this.t('wolfHowl'));
     }
 
 
@@ -411,7 +454,7 @@ export class Game {
                 this.pendingPurchasePos = { x: clickX, y: clickY };
                 document.getElementById('purchase-modal').style.display = 'block';
             } else {
-                this.showNotification("ليس لديك ذهب كافٍ! (تحتاج 100) ❌");
+                this.showNotification(this.t('notEnoughGold'));
             }
             this.pointer.isDown = false;
             return;
@@ -446,17 +489,17 @@ export class Game {
                     clickedWolf.health--;
                     if (clickedWolf.health > 0) {
                         clickedWolf.flee(this.player.x, this.player.y);
-                        this.showNotification("هرب الذئب! 🐺💨");
+                        this.showNotification(this.t('wolfFlee'));
                         this.soundManager.playEffect('hit'); // Play hit sound
                         this.createParticleVFX(clickedWolf.x, clickedWolf.y, '#f00', 10);
                     } else {
                         this.wolfList.splice(index, 1);
-                        this.showNotification("لقد قتلت الذئب! ⚔️");
+                        this.showNotification(this.t('wolfKill'));
                         this.soundManager.playEffect('hit');
                         this.createParticleVFX(clickedWolf.x, clickedWolf.y, '#f00', 20);
                         this.triggerScreenshake(0.3, 10);
                         this.addXP(25);
-                        this.addFloatingText(clickedWolf.x, clickedWolf.y, "قتلت الذئب! +25 XP", "#ff0", 25);
+                        this.addFloatingText(clickedWolf.x, clickedWolf.y, this.t('killedWolfXP'), "#ff0", 25);
 
                         // Wolf Loot Drop (30% chance)
                         if (Math.random() < 0.3) {
@@ -474,7 +517,7 @@ export class Game {
                 this.pointer.isDown = false;
                 return;
             } else {
-                this.showNotification("الذئب بعيد جداً! اقترب منه 🏃‍♂️");
+                this.showNotification(this.t('wolfTooFar'));
             }
         }
 
@@ -522,7 +565,7 @@ export class Game {
 
             // If we were extracting, cancel it
             if (this.extractionState.active) {
-                this.cancelExtraction("تم إلغاء جمع الذهب بسبب الحركة! ❌");
+                this.cancelExtraction(this.t('woolCancelMove'));
             }
         }
     }
@@ -538,7 +581,7 @@ export class Game {
         if (!this.pointer.isDragging) {
             // It was a click
             if (this.extractionState.active) {
-                this.cancelExtraction("تم إلغاء جمع الذهب بالنقر على الأرض! ❌");
+                this.cancelExtraction(this.t('woolCancelClick'));
             }
             // Project click target further (1.5x)
             const dx = clickX - this.player.x;
@@ -586,7 +629,7 @@ export class Game {
 
         this.soundManager.playEffect('Shear_the_wool');
         this.createParticleVFX(sheep.x, sheep.y, '#fff', 10);
-        this.showNotification("توجه إلى الخروف لجمع الصوف! 🚶‍♂️");
+        this.showNotification(this.t('woolCollected'));
 
         // Stop sheep movement
         sheep.isBeingSheared = true;
@@ -619,7 +662,7 @@ export class Game {
             if (sheep.isGolden) {
                 goldReward = 30;
                 xpReward = 30;
-                rewardText = "GOLDEN WOOL! +30 Gold";
+                rewardText = this.t('goldenWool');
                 rewardColor = "#ffcc00";
                 this.triggerScreenshake(0.2, 5);
                 this.createParticleVFX(sheep.x, sheep.y, "#ffcc00", 20);
@@ -672,7 +715,7 @@ export class Game {
         if (this.gameState.gold >= 100) {
             this.gameState.gold -= 100;
             this.spawnSheep();
-            this.showNotification("تم شراء خروف جديد! 🐑");
+            this.showNotification(this.t('newSheep'));
         }
         this.updateUI();
     }
@@ -681,7 +724,7 @@ export class Game {
         if (this.gameState.gold >= 150) {
             this.gameState.gold -= 150;
             this.spawnCow();
-            this.showNotification("تم شراء بقرة جديدة! 🥛");
+            this.showNotification(this.t('newCow'));
         }
         this.updateUI();
     }
@@ -690,9 +733,9 @@ export class Game {
         if (this.gameState.gold >= 40) {
             this.placementMode = 'grass';
             this.toggleShop(false);
-            this.showNotification("اختر مكاناً لزراعة العشب 🌿");
+            this.showNotification(this.t('chooseGrassLocation'));
         } else {
-            this.showNotification("تحتاج إلى 40 ذهب! 🪙");
+            this.showNotification(this.t('notEnoughGold40'));
         }
         this.updateUI();
     }
@@ -725,7 +768,7 @@ export class Game {
         tileMap.addTile('grass', tx, ty, grassId);
 
         this.createParticleVFX(worldX, worldY, '#4CAF50', 15);
-        this.showNotification("تمت زراعة العشب! 🌿");
+        this.showNotification(this.t('grassPlanted'));
 
         this.placementMode = null;
         this.updateUI();
@@ -735,9 +778,10 @@ export class Game {
         if (this.gameState.gold >= 100) {
             this.gameState.gold -= 100;
             this.player.speed *= 1.2;
-            this.showNotification("تمت ترقية السرعة! ⚡");
-            document.getElementById('upgrade-speed-btn').disabled = true;
-            document.getElementById('upgrade-speed-btn').textContent = "السرعة القصوى";
+            this.showNotification(this.t('speedUpgraded'));
+            const speedBtn = document.getElementById('upgrade-speed-btn');
+            speedBtn.disabled = true;
+            speedBtn.innerText = this.t('maxSpeed');
         }
         this.updateUI();
     }
@@ -749,7 +793,7 @@ export class Game {
             this.gameState.gold -= 100;
             this.trought.isTransformed = true;
             this.createParticleVFX(this.pendingPurchasePos.x, this.pendingPurchasePos.y, '#ffd700', 20);
-            this.showNotification("تم شراء الحوض! 🚰");
+            this.showNotification(this.t('troughtBought'));
             this.updateUI();
         }
         this.cancelPurchase(); // Close modal
@@ -1116,7 +1160,9 @@ export class Game {
         if (dayProgress > 7) {
             darkness = (dayProgress - 7) / 3 * 0.6;
         }
+
         if (darkness > 0) {
+            this.ctx.fillStyle = `rgba(0, 0, 30, ${darkness})`;
             this.ctx.fillRect(this.camera.x, this.camera.y, this.canvas.width, this.canvas.height);
         }
 

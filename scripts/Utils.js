@@ -23,12 +23,13 @@ export class Particle {
     }
 
     draw(ctx) {
+        ctx.save();
         ctx.fillStyle = this.color;
         ctx.globalAlpha = Math.max(0, this.life);
         ctx.beginPath();
         ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
+        ctx.restore();
     }
 }
 
@@ -46,6 +47,7 @@ export class Ripple {
     }
 
     draw(ctx) {
+        ctx.save();
         ctx.strokeStyle = '#8ED6FF';
         ctx.lineWidth = 1;
 
@@ -61,8 +63,7 @@ export class Ripple {
             ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
             ctx.stroke();
         }
-
-        ctx.globalAlpha = 1;
+        ctx.restore();
     }
 }
 
@@ -89,13 +90,14 @@ export class DustParticle {
     }
 
     draw(ctx) {
+        ctx.save();
         const alpha = Math.max(0, this.life / this.startLife);
         ctx.fillStyle = this.color;
         ctx.globalAlpha = alpha * 0.6; // Slightly transparent
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1.0;
+        ctx.restore();
     }
 }
 
@@ -116,11 +118,12 @@ export class FloatingText {
     }
 
     draw(ctx) {
+        ctx.save();
         ctx.fillStyle = this.color;
         ctx.font = `bold ${this.size}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.globalAlpha = Math.max(0, this.life);
         ctx.fillText(this.text, this.x, this.y);
-        ctx.globalAlpha = 1;
+        ctx.restore();
     }
 }

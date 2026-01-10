@@ -151,6 +151,7 @@ export class Cow extends Animal {
     }
 
     draw(ctx) {
+        ctx.save();
         // Shadow (Rendered before sprite for natural layering)
         ctx.shadowBlur = 0;
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -234,6 +235,7 @@ export class Cow extends Animal {
 
         // Draw status bars
         this.drawStatusBars(ctx);
+        ctx.restore();
     }
 
     serialize() {

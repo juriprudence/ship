@@ -145,24 +145,35 @@
         }
 
         .header-shop-btn {
-            background: #ffd700;
-            color: #432b14;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-right: 15px;
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: #8b4513;
+            color: #ffd700;
+            border: 3px solid #ffd700;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            z-index: 5000;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            pointer-events: auto;
             transition: transform 0.2s, background 0.2s;
+            display: none;
+            /* Hidden until game starts */
         }
 
         .header-shop-btn:hover {
-            background: #ffec80;
-            transform: scale(1.05);
+            transform: scale(1.1);
+            background: #a0522d;
+        }
+
+        .shop-btn-text {
+            display: none;
         }
 
         .close-shop-btn {
@@ -420,6 +431,63 @@
             accent-color: #ffd700;
         }
 
+        /* Language Selection Screen */
+        #language-selection {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #d4a373 0%, #8b4513 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            color: white;
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        .lang-content {
+            background: rgba(40, 30, 20, 0.85);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ffd700;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .lang-content h2 {
+            margin-bottom: 30px;
+            color: #ffd700;
+        }
+
+        .lang-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .lang-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.4rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .lang-btn:hover {
+            transform: scale(1.1);
+            background: #45a049;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
         /* Loading Bar Styles */
         .loading-container {
             width: 100%;
@@ -466,42 +534,6 @@
                 gap: 4px;
             }
 
-            .header-shop-btn {
-                position: fixed;
-                right: 20px;
-                bottom: 15px;
-                /* Positioned low as requested */
-                margin-right: 0;
-                z-index: 5000;
-                /* Extremely high to be above everything */
-                width: 65px;
-                height: 65px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 0;
-                font-size: 32px;
-                /* Large icon */
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
-                border: 3px solid #ffd700;
-                pointer-events: auto;
-                /* Explicitly auto */
-                background: #8b4513;
-                /* Brown background for better contrast */
-                color: #ffd700;
-                /* Gold icon */
-            }
-
-            .shop-btn-text {
-                display: none;
-            }
-
-            #open-shop-btn::before {
-                display: none;
-                /* Removed the redundant pseudo-element */
-            }
-
             .save-load-buttons {
                 gap: 4px;
             }
@@ -529,14 +561,31 @@
 <body>
 
     <div id="ui-layer">
+        <div id="language-selection">
+            <div class="lang-content">
+                <h1
+                    style="color: #ffd700; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); font-size: 2.5rem; margin-bottom: 30px;">
+                    راعي الصحراء / Desert Shepherd</h1>
+                <h2>Choose Language / اختر اللغة</h2>
+                <div class="lang-btns">
+                    <button class="lang-btn" onclick="window.game.setLanguage('en')">English</button>
+                    <button class="lang-btn" onclick="window.game.setLanguage('ar')">العربية</button>
+                </div>
+            </div>
+        </div>
+
         <div class="top-bar">
             <div style="display:flex; gap: 15px; align-items: center;">
-                <button class="header-shop-btn" id="open-shop-btn">🛒 <span class="shop-btn-text">المتجر</span></button>
-                <div class="resource">🪙 <span id="gold-display">0</span></div>
-                <div class="resource">🐑 <span id="sheep-display">0</span></div>
-                <div class="resource">🐄 <span id="cow-display">0</span></div>
-                <div class="resource">🧶 <span id="wool-display">0</span></div>
-                <div class="resource">🌟 <span id="level-display">1</span></div>
+                <div class="resource">🪙 <span id="gold-display">0</span> <span style="font-size: 0.8em; opacity: 0.7;"
+                        data-i18n="gold">ذهب</span></div>
+                <div class="resource">🐑 <span id="sheep-display">0</span> <span style="font-size: 0.8em; opacity: 0.7;"
+                        data-i18n="sheep">خراف</span></div>
+                <div class="resource">🐄 <span id="cow-display">0</span> <span style="font-size: 0.8em; opacity: 0.7;"
+                        data-i18n="cow">بقر</span></div>
+                <div class="resource">🧶 <span id="wool-display">0</span> <span style="font-size: 0.8em; opacity: 0.7;"
+                        data-i18n="wool">صوف</span></div>
+                <div class="resource">🌟 <span id="level-display">1</span> <span style="font-size: 0.8em; opacity: 0.7;"
+                        data-i18n="level">مستوى</span></div>
                 <div id="xp-bar-container"
                     style="width: 100px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,0,0.3); margin-right: 5px;">
                     <div id="xp-bar" style="width: 0%; height: 100%; background: #4CAF50; transition: width 0.3s;">
@@ -545,58 +594,69 @@
             </div>
 
             <div class="save-load-buttons">
-                <button class="save-btn" id="save-game-btn" onclick="window.game.saveGame()">💾 حفظ</button>
-                <button class="load-btn" id="load-game-btn" onclick="window.game.loadGame()">📂 تحميل</button>
+                <button class="save-btn" id="save-game-btn" onclick="window.game.saveGame()" data-i18n="save">💾
+                    حفظ</button>
+                <button class="load-btn" id="load-game-btn" onclick="window.game.loadGame()" data-i18n="load">📂
+                    تحميل</button>
             </div>
-            <div style="font-size: 14px; color: #ddd;">اليوم <span id="day-display">1</span></div>
+            <div style="font-size: 14px; color: #ddd;"><span data-i18n="day">اليوم</span> <span
+                    id="day-display">1</span></div>
         </div>
+
+        <button class="header-shop-btn" id="open-shop-btn">🛒 <span class="shop-btn-text"
+                data-i18n="shop">المتجر</span></button>
 
         <div class="notifications" id="notification-area"></div>
 
-        <div class="tutorial" id="tutorial-text">
+        <div class="tutorial" id="tutorial-text" data-i18n="tutorial">
             اضغط على الأرض للتحرك. قُد الخراف إلى الماء 💧 وإلى العشب 🌿. اجز صوفها عندما تصبح كثيفة ☁️.
         </div>
 
         <div id="shop-menu">
             <button class="close-shop-btn" id="close-shop-btn">×</button>
-            <h2>🛒 المتجر</h2>
-            <button class="shop-btn" id="buy-sheep-btn">شراء خروف (100 🪙)</button>
-            <button class="shop-btn" id="buy-cow-btn">شراء بقرة (150 🪙)</button>
-            <button class="shop-btn" id="buy-grass-btn">شراء عشب (40 🪙)</button>
-            <button class="shop-btn" id="upgrade-speed-btn">حذاء السرعة (100 🪙)</button>
-            <button class="ad-btn" id="show-ad-btn"><span>📺</span> شاهد إعلان (300 🪙+)</button>
+            <h2 data-i18n="shopTitle">🛒 المتجر</h2>
+            <button class="shop-btn" id="buy-sheep-btn" data-i18n="buySheep">شراء خروف (100 🪙)</button>
+            <button class="shop-btn" id="buy-cow-btn" data-i18n="buyCow">شراء بقرة (150 🪙)</button>
+            <button class="shop-btn" id="buy-grass-btn" data-i18n="buyGrass">شراء عشب (40 🪙)</button>
+            <button class="shop-btn" id="upgrade-speed-btn" data-i18n="upgradeSpeed">حذاء السرعة (100 🪙)</button>
+            <button class="ad-btn" id="show-ad-btn" data-i18n="showAd"><span>📺</span> شاهد إعلان (300 🪙+)</button>
         </div>
 
         <div id="purchase-modal">
-            <h3>شراء الحوض 🚰</h3>
-            <p>هل تريد شراء الحوض مقابل 100 🪙؟</p>
+            <h3 data-i18n="buyTroughtTitle">شراء الحوض 🚰</h3>
+            <p data-i18n="buyTroughtConfirm">هل تريد شراء الحوض مقابل 100 🪙؟</p>
             <div class="modal-buttons">
-                <button class="confirm-btn" id="confirm-purchase">نعم ✅</button>
-                <button class="cancel-btn" id="cancel-purchase">لا ❌</button>
+                <button class="confirm-btn" id="confirm-purchase" data-i18n="yes">نعم ✅</button>
+                <button class="cancel-btn" id="cancel-purchase" data-i18n="no">لا ❌</button>
             </div>
         </div>
 
-        <div id="start-screen">
+        <div id="start-screen" style="display: none;">
             <div class="start-content">
-                <h1>راعي الصحراء</h1>
+                <h1 data-i18n="gameTitle">راعي الصحراء</h1>
                 <ul class="logic-list">
-                    <li><span>التحرك:</span> اضغط على الأرض لتوجيه الراعي 👣</li>
-                    <li><span>الموارد:</span> وجّه الخراف للعشب 🌿 والماء 💧</li>
-                    <li><span>الاقتصاد:</span> جُزّ صوف الخراف ☁️ لجمع الذهب 🪙</li>
-                    <li><span>التطوير:</span> اشترِ الخراف والترقيات من المخيم ⛺</li>
-                    <li><span>الهدف:</span> حافظ على قطيعك لأطول فترة ممكنة! ⏳</li>
+                    <li><span data-i18n="moveDesc">التحرك:</span> <span data-i18n="moveDetail">اضغط على الأرض لتوجيه
+                            الراعي 👣</span></li>
+                    <li><span data-i18n="resourcesDesc">الموارد:</span> <span data-i18n="resourcesDetail">وجّه الخراف
+                            للعشب 🌿 والماء 💧</span></li>
+                    <li><span data-i18n="economyDesc">الاقتصاد:</span> <span data-i18n="economyDetail">جُزّ صوف الخراف
+                            ☁️ لجمع الذهب 🪙</span></li>
+                    <li><span data-i18n="upgradeDesc">التطوير:</span> <span data-i18n="upgradeDetail">اشترِ الخراف
+                            والترقيات من المخيم ⛺</span></li>
+                    <li><span data-i18n="goalDesc">الهدف:</span> <span data-i18n="goalDetail">حافظ على قطيعك لأطول فترة
+                            ممكنة! ⏳</span></li>
                 </ul>
 
                 <div id="loading-section">
-                    <div class="loading-text" id="loading-status">جاري تحميل الموارد...</div>
+                    <div class="loading-text" id="loading-status" data-i18n="loadingAssets">جاري تحميل الموارد...</div>
                     <div class="loading-container">
                         <div class="loading-bar" id="loading-bar"></div>
                     </div>
                 </div>
 
-                <button class="start-btn" id="start-game-btn" disabled>ابدأ المغامرة 🚀</button>
+                <button class="start-btn" id="start-game-btn" disabled data-i18n="startGame">ابدأ المغامرة 🚀</button>
                 <div class="sound-toggle-container" id="sound-toggle-wrap">
-                    <label for="sound-checkbox">تفعيل الصوت 🔊</label>
+                    <label for="sound-checkbox" data-i18n="enableSound">تفعيل الصوت 🔊</label>
                     <input type="checkbox" id="sound-checkbox" checked>
                 </div>
             </div>
@@ -605,9 +665,9 @@
 
     <!-- Game Over Screen -->
     <div id="game-over">
-        <h1>انتهت اللعبة!</h1>
-        <p>لقد نفذت جميع الخراف...</p>
-        <button onclick="window.game.restartGame()">إعادة المحاولة 🔄</button>
+        <h1 data-i18n="gameOver">انتهت اللعبة!</h1>
+        <p data-i18n="noSheepLeft">لقد نفذت جميع الخراف...</p>
+        <button onclick="window.game.restartGame()" data-i18n="retry">إعادة المحاولة 🔄</button>
     </div>
 
     <style>

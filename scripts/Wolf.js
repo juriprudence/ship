@@ -228,8 +228,12 @@ export class Wolf {
     }
 
     draw(ctx) {
+        ctx.save();
         const img = this.frames[this.animationFrame];
-        if (!img.complete) return;
+        if (!img.complete) {
+            ctx.restore();
+            return;
+        }
 
         // Sprite sheet (2x2)
         // Down: 0, 0
@@ -270,6 +274,7 @@ export class Wolf {
                 this.x - this.width / 2, this.y - this.height / 2, this.width, this.height
             );
         }
+        ctx.restore();
     }
 
     isVisible(camera, canvasWidth, canvasHeight) {

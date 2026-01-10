@@ -34,14 +34,25 @@ export class World {
         this.tileset.src = 'scripts/maps/spritesheet.png';
 
         this.tileMap = null;
-        fetch('scripts/maps/map.json')
-            .then(response => response.json())
-            .then(data => {
-                this.tileMap = new TileMap(data, this.tileset);
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'scripts/maps/map.json', true);
+        xhr.responseType = 'json';
+
+        xhr.onload = () => {
+            if (xhr.status === 200 || (xhr.status === 0 && xhr.response)) {
+                this.tileMap = new TileMap(xhr.response, this.tileset);
                 this.tileMap.setScale(3);
                 this.tileMap.setCenter(400, 300);
-            })
-            .catch(err => console.error('Failed to load map:', err));
+            } else {
+                console.error('Failed to load map directly:', xhr.status);
+            }
+        };
+
+        xhr.onerror = () => {
+            console.error('Network error loading map directly');
+        };
+
+        xhr.send();
     }
 
     initDecor() {

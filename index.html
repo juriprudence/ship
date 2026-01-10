@@ -219,6 +219,35 @@
             filter: grayscale(1);
         }
 
+        .ad-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            border: 2px solid #FFD700;
+            color: white;
+            padding: 12px 15px;
+            margin: 10px 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            display: none;
+            /* Hidden by default */
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            width: calc(100% - 10px);
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .ad-btn:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+
+        .ad-btn span {
+            font-size: 18px;
+        }
+
         .tutorial {
             position: absolute;
             bottom: 10%;
@@ -416,6 +445,84 @@
             color: #deb887;
             margin-bottom: 5px;
         }
+
+        /* Mobile Responsive Adjustments */
+        @media screen and (max-width: 768px) {
+            .top-bar {
+                padding: 5px 10px;
+                font-size: 14px;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 5px;
+            }
+
+            .top-bar>div:first-child {
+                gap: 8px !important;
+                justify-content: center;
+                width: 100%;
+            }
+
+            .resource {
+                gap: 4px;
+            }
+
+            .header-shop-btn {
+                position: fixed;
+                right: 20px;
+                bottom: 15px;
+                /* Positioned low as requested */
+                margin-right: 0;
+                z-index: 5000;
+                /* Extremely high to be above everything */
+                width: 65px;
+                height: 65px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                font-size: 32px;
+                /* Large icon */
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+                border: 3px solid #ffd700;
+                pointer-events: auto;
+                /* Explicitly auto */
+                background: #8b4513;
+                /* Brown background for better contrast */
+                color: #ffd700;
+                /* Gold icon */
+            }
+
+            .shop-btn-text {
+                display: none;
+            }
+
+            #open-shop-btn::before {
+                display: none;
+                /* Removed the redundant pseudo-element */
+            }
+
+            .save-load-buttons {
+                gap: 4px;
+            }
+
+            .save-btn,
+            .load-btn {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+
+            /* Extra small screens adjustments */
+            @media screen and (max-width: 480px) {
+                .top-bar>div:first-child {
+                    flex-wrap: wrap;
+                }
+
+                #xp-bar-container {
+                    width: 60px !important;
+                }
+            }
+        }
     </style>
 </head>
 
@@ -424,13 +531,13 @@
     <div id="ui-layer">
         <div class="top-bar">
             <div style="display:flex; gap: 15px; align-items: center;">
-                <button class="header-shop-btn" id="open-shop-btn">🛒 المتجر</button>
+                <button class="header-shop-btn" id="open-shop-btn">🛒 <span class="shop-btn-text">المتجر</span></button>
                 <div class="resource">🪙 <span id="gold-display">0</span></div>
                 <div class="resource">🐑 <span id="sheep-display">0</span></div>
                 <div class="resource">🐄 <span id="cow-display">0</span></div>
                 <div class="resource">🧶 <span id="wool-display">0</span></div>
                 <div class="resource">🌟 <span id="level-display">1</span></div>
-                <div
+                <div id="xp-bar-container"
                     style="width: 100px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,0,0.3); margin-right: 5px;">
                     <div id="xp-bar" style="width: 0%; height: 100%; background: #4CAF50; transition: width 0.3s;">
                     </div>
@@ -457,6 +564,7 @@
             <button class="shop-btn" id="buy-cow-btn">شراء بقرة (150 🪙)</button>
             <button class="shop-btn" id="buy-grass-btn">شراء عشب (40 🪙)</button>
             <button class="shop-btn" id="upgrade-speed-btn">حذاء السرعة (100 🪙)</button>
+            <button class="ad-btn" id="show-ad-btn"><span>📺</span> شاهد إعلان (300 🪙+)</button>
         </div>
 
         <div id="purchase-modal">

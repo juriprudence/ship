@@ -103,6 +103,8 @@ export class Game {
         this.startGame = this.startGame.bind(this);
         this.handleSoundToggle = this.handleSoundToggle.bind(this);
         this.toggleShop = this.toggleShop.bind(this);
+        this.showAd = this.showAd.bind(this);
+        this.handleAdReward = this.handleAdReward.bind(this);
     }
 
     init() {
@@ -127,6 +129,19 @@ export class Game {
         // Bind shop toggle buttons
         document.getElementById('open-shop-btn').addEventListener('click', () => this.toggleShop(true));
         document.getElementById('close-shop-btn').addEventListener('click', () => this.toggleShop(false));
+
+        // Ad button binding
+        const adBtn = document.getElementById('show-ad-btn');
+        if (adBtn) {
+            adBtn.addEventListener('click', this.showAd);
+        }
+
+        // Global callback for Android Ads
+        window.onAdComplete = () => {
+            if (window.game) {
+                window.game.handleAdReward();
+            }
+        };
 
         // Sound toggle binding - moved soundManager initialization to after assets ready
 
@@ -277,7 +292,60 @@ export class Game {
         const shopMenu = document.getElementById('shop-menu');
         if (shopMenu) {
             shopMenu.style.display = show ? 'block' : 'none';
+
+            // Check if ad is ready whenever shop is opened
+            if (show) {
+                const adBtn = document.getElementById('show-ad-btn');
+                if (adBtn && typeof Android !== 'undefined' && Android.isRewardAdReady) {
+                    const isReady = Android.isRewardAdReady();
+                    adBtn.style.display = (isReady === 'true') ? 'flex' : 'none';
+                }
+            }
         }
+    }
+
+    showAd() {
+        if (typeof Android !== 'undefined' && Android.showRewardAd) {
+            Android.showRewardAd();
+            // Optional: Hide button immediately to prevent double clicks
+            const adBtn = document.getElementById('show-ad-btn');
+            if (adBtn) adBtn.style.display = 'none';
+        } else {
+            this.showNotification("نظام الإعلانات غير متوفر حالياً ❌");
+        }
+    }
+
+    handleAdReward() {
+        const rewardAmount = 300;
+        this.gameState.gold += rewardAmount;
+        this.updateUI();
+
+        // Visual and audio feedback
+        this.showNotification(`لقد حصلت على ${rewardAmount} 🪙! 🎁`);
+        this.soundManager.playEffect('hit'); // Success sound
+        this.triggerScreenshake(0.3, 10);
+
+        // Spawn gold particles from center of screen (or shop button)
+        const centerX = this.camera.x + this.canvas.width / 2;
+        const centerY = this.camera.y + this.canvas.height / 2;
+
+        for (let i = 0; i < 30; i++) {
+            setTimeout(() => {
+                const offsetX = (Math.random() - 0.5) * 100;
+                const offsetY = (Math.random() - 0.5) * 100;
+                this.goldParticles.push(
+                    new GoldParticle(
+                        centerX + offsetX,
+                        centerY + offsetY,
+                        this.player.x,
+                        this.player.y
+                    )
+                );
+            }, i * 30);
+        }
+        this.goldBursts.push(new GoldBurst(centerX, centerY, 15));
+
+        this.addFloatingText(centerX, centerY - 50, `+${rewardAmount} GOLD`, "#ffd700", 40);
     }
 
     resize() {

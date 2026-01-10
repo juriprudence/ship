@@ -156,7 +156,7 @@ export class Wolf {
                     nearestSheep.die();
                     this.state = 'eating';
                     this.targetSheep = nearestSheep;
-                    return { kill: true, message: "the wolf eat the sheep" };
+                    return { kill: true, message: "wolfEatSheep" };
                 } else {
                     return { hit: true };
                 }

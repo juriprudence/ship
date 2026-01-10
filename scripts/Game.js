@@ -505,7 +505,7 @@ export class Game {
                         if (Math.random() < 0.3) {
                             const bonusGold = 50;
                             this.gameState.gold += bonusGold;
-                            this.addFloatingText(clickedWolf.x, clickedWolf.y - 30, `+${bonusGold} Gold (فرو ذئب)`, "#ffd700", 22);
+                            this.addFloatingText(clickedWolf.x, clickedWolf.y - 30, `+${bonusGold} ${this.t('gold')} (${this.t('wolfPelt')})`, "#ffd700", 22);
                         }
 
 
@@ -782,6 +782,7 @@ export class Game {
             const speedBtn = document.getElementById('upgrade-speed-btn');
             speedBtn.disabled = true;
             speedBtn.innerText = this.t('maxSpeed');
+            speedBtn.setAttribute('data-i18n', 'maxSpeed');
         }
         this.updateUI();
     }
@@ -890,7 +891,7 @@ export class Game {
             if (dist < 20) {
                 if (!this.extractionState.hasReached) {
                     this.extractionState.hasReached = true;
-                    this.showNotification("جاري جمع الذهب... اثبت مكانك! ⏳");
+                    this.showNotification(this.t('collectingGold'));
                     console.log('DEBUG: Entering Shearing State');
                     this.player.isShearing = true;
                     this.soundManager.startShearingSound();
@@ -905,9 +906,9 @@ export class Game {
                 this.player.isMoving = false;
 
             } else if (this.extractionState.hasReached && dist > 40) {
-                this.cancelExtraction("ابتعدت كثيراً! تم إلغاء جمع الذهب ❌");
+                this.cancelExtraction(this.t('toofarGold'));
             } else if (dist > 350 && !this.extractionState.hasReached) {
-                this.cancelExtraction("الخروف بعيد جداً! ❌");
+                this.cancelExtraction(this.t('sheepTooFar'));
             }
 
             if (this.extractionState.timer >= 5) {
@@ -918,14 +919,14 @@ export class Game {
 
         const worldEvent = this.world.update(dt, this.player.x, this.player.y, this.gameState.day);
         if (worldEvent.respawned) {
-            this.showNotification("نمت الأعشاب في مكان جديد! 🌿");
+            this.showNotification(this.t('grassRegrown'));
         }
 
         if (this.trought.isExpired) {
             // Range increases by 1.0 for each day (e.g., Day 1: 1.0, Day 2: 2.0, Day 3: 3.0, etc.)
             const rangeMultiplier = 1 + (this.gameState.day - 1) * 1.0;
             this.trought = new Trought(rangeMultiplier, this.loader);
-            this.showNotification("انتهى مفعول الحوض! 🥀");
+            this.showNotification(this.t('troughtEmpty'));
         }
 
         // Camera Follow
@@ -950,7 +951,7 @@ export class Game {
         this.sheepList.forEach(s => {
             const event = s.update(dt, this.player, this.world, this.sheepList, this.trought);
             if (event && event.died) {
-                this.showNotification(`مات خروف من ${event.cause}! 💀`);
+                this.showNotification(this.t('sheepDied', { cause: this.t(event.cause) }));
                 this.soundManager.playEffect('daying_sheep');
                 this.updateUI();
             } else if (event && event.finished) {
@@ -995,7 +996,7 @@ export class Game {
 
             if (event) {
                 if (event.kill) {
-                    this.showNotification(event.message + "! 🐺");
+                    this.showNotification(this.t(event.message) + " 🐺");
                     this.soundManager.playEffect('daying_sheep');
                     this.updateUI();
                 } else if (event.hit) {
@@ -1024,7 +1025,7 @@ export class Game {
         this.cowList.forEach(c => {
             const event = c.update(dt, this.player, this.world, this.cowList, this.trought);
             if (event && event.died) {
-                this.showNotification(`ماتت بقرة من ${event.cause}! 💀`);
+                this.showNotification(this.t('cowDied', { cause: this.t(event.cause) }));
                 this.soundManager.playEffect('daying_cow');
                 this.updateUI();
             } else {
@@ -1218,11 +1219,11 @@ export class Game {
         this.gameState.xp -= this.gameState.xpToNextLevel;
         this.gameState.xpToNextLevel = Math.floor(this.gameState.xpToNextLevel * 1.5);
 
-        this.showNotification(`مستوى جديد! مستوى ${this.gameState.level} 🌟`);
+        this.showNotification(this.t('levelUpMsg', { level: this.gameState.level }));
         this.soundManager.playEffect('hit'); // Placeholder for level-up sound
         this.triggerScreenshake(0.5, 15);
         this.createParticleVFX(this.player.x, this.player.y, '#ffd700', 30);
-        this.addFloatingText(this.player.x, this.player.y - 40, "LEVEL UP!", "#fff", 40);
+        this.addFloatingText(this.player.x, this.player.y - 40, this.t('levelUpMsgFloating'), "#fff", 40);
 
         // Reward: Speed boost
         this.player.speed += 10;
@@ -1266,7 +1267,7 @@ export class Game {
         if (buyCowBtn) buyCowBtn.disabled = this.gameState.gold < 150;
         const buyGrassBtn = document.getElementById('buy-grass-btn');
         if (buyGrassBtn) buyGrassBtn.disabled = this.gameState.gold < 40;
-        if (upgradeBtn && upgradeBtn.textContent !== "السرعة القصوى") {
+        if (upgradeBtn && upgradeBtn.getAttribute('data-i18n') !== "maxSpeed") {
             upgradeBtn.disabled = this.gameState.gold < 100;
         }
 
@@ -1287,9 +1288,9 @@ export class Game {
     saveGame() {
         const success = SaveSystem.save(this);
         if (success) {
-            this.showNotification("تم حفظ اللعبة! 💾");
+            this.showNotification(this.t('saved'));
         } else {
-            this.showNotification("فشل في حفظ اللعبة! ❌");
+            this.showNotification(this.t('saveFailed'));
         }
         return success;
     }

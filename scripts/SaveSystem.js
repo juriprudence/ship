@@ -31,13 +31,13 @@ export class SaveSystem {
     static load(game) {
         try {
             const saveDataStr = localStorage.getItem(this.STORAGE_KEY);
-            if (!saveDataStr) return { success: false, message: 'لا يوجد حفظ سابق' };
+            if (!saveDataStr) return { success: false, message: game.t('noSaveFound') };
 
             const saveData = JSON.parse(saveDataStr);
-            
+
             // Validate version
             if (!saveData.version) {
-                return { success: false, message: 'ملف الحفظ غير صالح' };
+                return { success: false, message: game.t('invalidSave') };
             }
 
             // Restore game state
@@ -88,10 +88,10 @@ export class SaveSystem {
             }
 
             game.updateUI();
-            return { success: true, message: 'تم تحميل الحفظ بنجاح!' };
+            return { success: true, message: game.t('saveLoaded') };
         } catch (e) {
             console.error('Failed to load game:', e);
-            return { success: false, message: 'فشل في تحميل الحفظ' };
+            return { success: false, message: game.t('loadFailed') };
         }
     }
 

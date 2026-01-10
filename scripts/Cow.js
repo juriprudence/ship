@@ -128,7 +128,7 @@ export class Cow extends Animal {
                 // Signal reward
                 if (window.game) {
                     window.game.gameState.gold += 15;
-                    window.game.showNotification("تم حلب البقرة آلياً! +15 ذهب 🥛");
+                    window.game.showNotification(window.game.t('cowMilkedAuto'));
                     window.game.updateUI();
                     if (window.game.soundManager) window.game.soundManager.stopMilkingSound();
                 }

@@ -37,7 +37,7 @@ export class Animal {
 
         // Check Death
         if (this.thirst > 100 || this.hunger > 100) {
-            return { died: true, cause: this.thirst > 100 ? "العطش" : "الجوع" };
+            return { died: true, cause: this.thirst > 100 ? "thirst" : "hunger" };
         }
         return null;
     }
@@ -55,9 +55,9 @@ export class Animal {
             moveX = Math.cos(angle) * 0.2;
             moveY = Math.sin(angle) * 0.2;
             speed = 20;
-        } else if (trought && trought.isTransformed && !trought.isExpired && 
-                   (this.thirst > 50 || this.hunger > 50) && !inTroughtArea(this, trought) && 
-                   (trought.currentUsers < trought.maxUsers || this.isUsingTrought)) {
+        } else if (trought && trought.isTransformed && !trought.isExpired &&
+            (this.thirst > 50 || this.hunger > 50) && !inTroughtArea(this, trought) &&
+            (trought.currentUsers < trought.maxUsers || this.isUsingTrought)) {
             const angle = Math.atan2(trought.y - this.y, trought.x - this.x);
             moveX = Math.cos(angle);
             moveY = Math.sin(angle);
@@ -245,7 +245,7 @@ export class Animal {
             const barHeight = 4;
             const x = this.x - barWidth / 2;
             const y = this.y - this.height / 2 - 15;
-            
+
             ctx.fillStyle = 'rgba(0,0,0,0.5)';
             ctx.fillRect(x, y, barWidth, barHeight);
             ctx.fillStyle = this.thirst > 80 ? 'red' : '#4fa4b8';
@@ -259,7 +259,7 @@ export class Animal {
             const barHeight = 4;
             const x = this.x - barWidth / 2;
             const y = this.y - this.height / 2 - 22;
-            
+
             ctx.fillStyle = 'rgba(0,0,0,0.5)';
             ctx.fillRect(x, y, barWidth, barHeight);
             ctx.fillStyle = this.hunger > 80 ? 'red' : '#a0522d';
@@ -334,7 +334,7 @@ function findNearestWater(animal, world, perceptionRadius) {
 
 function findNearestFood(animal, world, perceptionRadius) {
     if (!world.tileMap) return null;
-    
+
     const nearestTile = world.tileMap.getNearestTileInLayer(animal.x, animal.y, 'grass');
     if (nearestTile) {
         const distToTile = Math.hypot(animal.x - nearestTile.x, animal.y - nearestTile.y);

@@ -2,11 +2,8 @@ import { drawEmoji } from './Utils.js';
 import { Animal } from './Animal.js';
 
 const sheepImages = {
-    down: new Image(),
-    up: new Image(),
-    right: new Image(),
-    walk: [new Image(), new Image(), new Image(), new Image()], // 4 frames for walk animation
-    eat: [new Image(), new Image()], // 2 frames for eating/drinking animation
+    spritesheet: new Image(),
+    eatingSpritesheet: new Image(), // New 4x4 eating animation
     die: [new Image(), new Image(), new Image(), new Image()] // 4 frames for death animation/stages
 };
 
@@ -14,29 +11,15 @@ let sheepImagesLoaded = false;
 function loadSheepImages(assets) {
     if (sheepImagesLoaded) return;
     if (assets) {
-        sheepImages.down = assets.getAsset('images', 'images/sheep/down.png');
-        sheepImages.up = assets.getAsset('images', 'images/sheep/up.png');
-        sheepImages.right = assets.getAsset('images', 'images/sheep/right.png');
-        sheepImages.walk[0] = assets.getAsset('images', 'images/sheep/left.png');
-        sheepImages.walk[1] = assets.getAsset('images', 'images/sheep/walk_1.png');
-        sheepImages.walk[2] = assets.getAsset('images', 'images/sheep/walk_2.png');
-        sheepImages.walk[3] = assets.getAsset('images', 'images/sheep/walk_3.png');
-        sheepImages.eat[0] = assets.getAsset('images', 'images/sheep/head_down/eat (1).png');
-        sheepImages.eat[1] = assets.getAsset('images', 'images/sheep/head_down/eat (2).png');
+        sheepImages.spritesheet = assets.getAsset('images', 'images/sheep/sheepw.png');
+        sheepImages.eatingSpritesheet = assets.getAsset('images', 'images/sheep/sheep.png');
         sheepImages.die[0] = assets.getAsset('images', 'images/sheep/sheep_die/1.png');
         sheepImages.die[1] = assets.getAsset('images', 'images/sheep/sheep_die/2.png');
         sheepImages.die[2] = assets.getAsset('images', 'images/sheep/sheep_die/3.png');
         sheepImages.die[3] = assets.getAsset('images', 'images/sheep/sheep_die/4.png');
     } else {
-        sheepImages.down.src = 'images/sheep/down.png';
-        sheepImages.up.src = 'images/sheep/up.png';
-        sheepImages.right.src = 'images/sheep/right.png';
-        sheepImages.walk[0].src = 'images/sheep/left.png';    // Frame 0
-        sheepImages.walk[1].src = 'images/sheep/walk_1.png';  // Frame 1
-        sheepImages.walk[2].src = 'images/sheep/walk_2.png';  // Frame 2
-        sheepImages.walk[3].src = 'images/sheep/walk_3.png';  // Frame 3
-        sheepImages.eat[0].src = 'images/sheep/head_down/eat (1).png';
-        sheepImages.eat[1].src = 'images/sheep/head_down/eat (2).png';
+        sheepImages.spritesheet.src = 'images/sheep/sheepw.png';
+        sheepImages.eatingSpritesheet.src = 'images/sheep/sheep.png';
         sheepImages.die[0].src = 'images/sheep/sheep_die/1.png';
         sheepImages.die[1].src = 'images/sheep/sheep_die/2.png';
         sheepImages.die[2].src = 'images/sheep/sheep_die/3.png';
@@ -53,8 +36,8 @@ export class Sheep extends Animal {
         this.woolGrowth = 0; // 0 to 100
 
         // Override dimensions for sheep
-        this.width = 80;
-        this.height = 80;
+        this.width = 50;
+        this.height = 50;
 
         this.lifeState = 'alive'; // 'alive' or 'dying'
         this.deathStage = 0; // 0 to 3
@@ -123,7 +106,7 @@ export class Sheep extends Animal {
         ctx.shadowBlur = 0;
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + 10, 20, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + 7, 10, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
         if (this.lifeState === 'dying') {
@@ -155,27 +138,71 @@ export class Sheep extends Animal {
 
 
         // Draw Sprite
-        let img = sheepImages[this.facing];
+        let img = null;
         let flip = false;
+        let useSpritesheet = false;
 
         if (this.isEating) {
-            img = sheepImages.eat[this.animationFrame % 2];
-            if (this.facing === 'left') flip = true;
-        } else if (this.facing === 'left' || this.facing === 'right') {
-            const walkSequence = [0, 1, 2, 3, 2, 1];
-            img = sheepImages.walk[walkSequence[this.animationFrame % walkSequence.length]];
-            if (this.facing === 'left') flip = true;
+            img = sheepImages.eatingSpritesheet;
+            useSpritesheet = true;
+        } else {
+            img = sheepImages.spritesheet;
+            useSpritesheet = true;
         }
 
-        if (img && img.complete) {
-            if (flip) {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.scale(-1, 1);
-                ctx.drawImage(img, -this.width / 2, -this.height / 2, this.width, this.height);
-                ctx.restore();
+        if (img && img.complete && (useSpritesheet || img.naturalWidth > 0)) {
+            if (this.isEating && img === sheepImages.eatingSpritesheet) {
+                // New Eating Animation Logic (4x4 Grid)
+                // Cols: 0=Up, 1=Left, 2=Right, 3=Down
+                // Rows: 4 frames of animation
+
+                const frameW = img.naturalWidth / 4;
+                const frameH = img.naturalHeight / 4;
+
+                let col = 3; // Default to Down
+                if (this.facing === 'up') col = 0;
+                else if (this.facing === 'left') col = 1;
+                else if (this.facing === 'right') col = 2;
+                else col = 3; // down
+
+                // Cycle through 4 frames (rows)
+                // Frame is calculated in updateAnimation
+                const eatFrame = this.animationFrame;
+
+                ctx.drawImage(
+                    img,
+                    col * frameW, eatFrame * frameH, frameW, frameH,
+                    this.x - this.width / 2, this.y - this.height / 2, this.width, this.height
+                );
+
+            } else if (useSpritesheet) {
+                const frameW = img.naturalWidth / 4;
+                const frameH = img.naturalHeight / 4;
+
+                let row = 0;
+                if (this.facing === 'left') row = 1;
+                else if (this.facing === 'right') row = 2;
+                else if (this.facing === 'up') row = 3;
+                else row = 0; // down
+
+                const walkSequence = [0, 1, 2, 3, 2, 1];
+                const frameIndex = this.isMoving ? walkSequence[this.animationFrame % walkSequence.length] : 0;
+
+                ctx.drawImage(
+                    img,
+                    frameIndex * frameW, row * frameH, frameW, frameH,
+                    this.x - this.width / 2, this.y - this.height / 2, this.width, this.height
+                );
             } else {
-                ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+                if (flip) {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(img, -this.width / 2, -this.height / 2, this.width, this.height);
+                    ctx.restore();
+                } else {
+                    ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+                }
             }
         } else {
             // Fallback if image not loaded yet
@@ -187,6 +214,23 @@ export class Sheep extends Animal {
         // Draw status bars
         this.drawStatusBars(ctx);
         ctx.restore();
+    }
+
+    updateAnimation(dt, isEating, getWalkSequence) {
+        if (isEating) {
+            if (!this.wasEating) {
+                this.animationTimer = 0;
+                this.animationFrame = 0;
+            }
+            this.wasEating = true;
+
+            this.animationTimer += dt;
+            // Play at 5fps (0.2s per frame), clamp to frame 3
+            this.animationFrame = Math.min(3, Math.floor(this.animationTimer / 0.2));
+        } else {
+            this.wasEating = false;
+            super.updateAnimation(dt, isEating, getWalkSequence);
+        }
     }
 
     serialize() {

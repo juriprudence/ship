@@ -201,19 +201,14 @@ export class Game {
             'images/playermi2.png',
             'images/newplayer/playerhitow.png',
             'images/newplayer/playerhitone.png',
-            'images/sheep/down.png',
-            'images/sheep/up.png',
-            'images/sheep/right.png',
-            'images/sheep/left.png',
-            'images/sheep/walk_1.png',
-            'images/sheep/walk_2.png',
-            'images/sheep/walk_3.png',
+            'images/sheep/sheepw.png',
             'images/sheep/head_down/eat (1).png',
             'images/sheep/head_down/eat (2).png',
             'images/sheep/sheep_die/1.png',
             'images/sheep/sheep_die/2.png',
             'images/sheep/sheep_die/3.png',
             'images/sheep/sheep_die/4.png',
+            'images/sheep/sheep.png',
             'images/cow/down.png',
             'images/cow/up.png',
             'images/cow/left.png',
@@ -321,7 +316,7 @@ export class Game {
         }
         for (let i = 0; i < 2; i++) this.spawnSheep();
         this.spawnCow();
-        for (let i = 0; i < 2; i++) this.spawnWolf();
+        for (let i = 0; i < 6; i++) this.spawnWolf();
 
         requestAnimationFrame(this.gameLoop);
     }
@@ -1227,6 +1222,9 @@ export class Game {
 
         // Reward: Speed boost
         this.player.speed += 10;
+
+        // Increase difficulty: Spawn additional wolf
+        this.spawnWolf();
     }
 
     addFloatingText(x, y, text, color, size) {
@@ -1311,3 +1309,4 @@ window.onload = () => {
     window.game = new Game(); // Expose to window for button access
     window.game.init();
 };
+// Bootstrap

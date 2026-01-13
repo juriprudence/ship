@@ -18,6 +18,10 @@ export const translations = {
         buyGrass: 'Buy Grass (40 🪙)',
         upgradeSpeed: 'Speed Boots (100 🪙)',
         maxSpeed: 'Max Speed',
+        buyFire: 'Buy Fire (30 🪙)',
+        chooseFireLocation: 'Choose location for Fire 🔥',
+        firePlanted: 'Fire placed! 🔥',
+        notEnoughGold30: 'Not enough gold! (Need 30) ❌',
         showAd: 'Watch Ad (300 🪙+)',
         buyTroughtTitle: 'Buy Trought 🚰',
         buyTroughtConfirm: 'Do you want to buy the trought for 100 🪙?',
@@ -100,6 +104,10 @@ export const translations = {
         buyGrass: 'شراء عشب (40 🪙)',
         upgradeSpeed: 'حذاء السرعة (100 🪙)',
         maxSpeed: 'السرعة القصوى',
+        buyFire: 'شراء نار (30 🪙)',
+        chooseFireLocation: 'اختر موقعاً للنار 🔥',
+        firePlanted: 'تم وضع النار! 🔥',
+        notEnoughGold30: 'ليس لديك ذهب كافٍ! (تحتاج 30) ❌',
         showAd: 'شاهد إعلان (300 🪙+)',
         buyTroughtTitle: 'شراء الحوض 🚰',
         buyTroughtConfirm: 'هل تريد شراء الحوض مقابل 100 🪙؟',

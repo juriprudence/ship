@@ -12,6 +12,7 @@ import { AssetLoader } from './AssetLoader.js';
 import { SaveSystem } from './SaveSystem.js';
 import { GoldParticle, GoldBurst } from './GoldParticle.js';
 import { translations } from './translations.js';
+import { Fire } from './Fire.js';
 
 export class Game {
     constructor() {
@@ -47,6 +48,7 @@ export class Game {
         this.sheepList = [];
         this.cowList = [];
         this.wolfList = [];
+        this.fireList = [];
         this.MAX_SHEEP = 50;
         this.MAX_COW = 30;
 
@@ -98,6 +100,7 @@ export class Game {
         this.buySheep = this.buySheep.bind(this);
         this.buyCow = this.buyCow.bind(this);
         this.buyGrass = this.buyGrass.bind(this);
+        this.buyFire = this.buyFire.bind(this);
         this.upgradeSpeed = this.upgradeSpeed.bind(this);
         this.restartGame = this.restartGame.bind(this);
 
@@ -124,6 +127,8 @@ export class Game {
         document.getElementById('buy-sheep-btn').addEventListener('click', this.buySheep);
         document.getElementById('buy-cow-btn').addEventListener('click', this.buyCow);
         document.getElementById('buy-grass-btn').addEventListener('click', this.buyGrass);
+        const buyFireBtn = document.getElementById('buy-fire-btn');
+        if (buyFireBtn) buyFireBtn.addEventListener('click', this.buyFire);
         document.getElementById('upgrade-speed-btn').addEventListener('click', this.upgradeSpeed);
 
         document.getElementById('confirm-purchase').addEventListener('click', this.confirmPurchase);
@@ -209,6 +214,7 @@ export class Game {
             'images/sheep/sheep_die/3.png',
             'images/sheep/sheep_die/4.png',
             'images/sheep/sheep.png',
+            'images/heart_sheep.png',
             'images/cow/down.png',
             'images/cow/up.png',
             'images/cow/left.png',
@@ -441,6 +447,12 @@ export class Game {
                 this.placeGrassland(clickX, clickY);
             }
             this.pointer.isDown = false; // Reset so dragging doesn't start
+            return;
+        }
+
+        if (this.placementMode === 'fire') {
+            this.placeFire(clickX, clickY);
+            this.pointer.isDown = false;
             return;
         }
 
@@ -735,6 +747,32 @@ export class Game {
         this.updateUI();
     }
 
+    buyFire() {
+        if (this.gameState.gold >= 30) {
+            this.placementMode = 'fire';
+            this.toggleShop(false);
+            this.showNotification(this.t('chooseFireLocation'));
+        } else {
+            this.showNotification(this.t('notEnoughGold30'));
+        }
+        this.updateUI();
+    }
+
+    placeFire(worldX, worldY) {
+        if (this.gameState.gold < 30) {
+            this.placementMode = null;
+            return;
+        }
+
+        this.gameState.gold -= 30;
+        this.fireList.push(new Fire(worldX, worldY));
+        this.createParticleVFX(worldX, worldY, '#ff4500', 30);
+        this.showNotification(this.t('firePlanted'));
+
+        this.placementMode = null;
+        this.updateUI();
+    }
+
     placeGrass(worldX, worldY) {
         if (this.gameState.gold < 40) {
             this.placementMode = null;
@@ -975,9 +1013,26 @@ export class Game {
         });
         this.sheepList = survivingSheep;
 
+        // Update Fires
+        this.fireList.forEach(f => f.update(dt));
+        this.fireList = this.fireList.filter(f => f.lifeTime > 0);
+
         // Wolf Logic
         this.wolfList.forEach(w => {
-            const event = w.update(dt, this.sheepList, this.world, this.wolfList, this.player);
+            const event = w.update(dt, this.sheepList, this.world, this.wolfList, this.player, this.fireList);
+            if (event && event.kill) {
+                this.showNotification(this.t(event.message) + " 🐺");
+                this.soundManager.playEffect('daying_sheep');
+                this.updateUI();
+            } else if (event && event.hit) {
+                // Small hit feedback
+                this.soundManager.playEffect('hit');
+                // Find target sheep to spawn particles (wolf current target is nearest)
+                const target = this.sheepList.find(s => Math.hypot(w.x - s.x, w.y - s.y) < 50);
+                if (target) {
+                    this.createParticleVFX(target.x, target.y, '#f00', 5);
+                }
+            }
 
             // Wolf ripples
             const isMoving = Math.abs(w.x - w.lastX || 0) > 0.1 || Math.abs(w.y - w.lastY || 0) > 0.1;
@@ -1083,7 +1138,12 @@ export class Game {
 
         // Z-Index Sorting (Render entities based on Y coordinate)
         const renderList = [];
-        if (this.trought) renderList.push(this.trought);
+        if (this.trought) {
+            this.trought.draw(this.ctx);
+        }
+
+        // Draw Fires
+        this.fireList.forEach(f => f.draw(this.ctx));
         renderList.push(this.player);
         this.sheepList.forEach(s => renderList.push(s));
         this.cowList.forEach(c => renderList.push(c));

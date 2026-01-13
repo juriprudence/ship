@@ -15,6 +15,7 @@ export class SaveSystem {
             player: game.player ? game.player.serialize() : null,
             sheep: game.sheepList.map(s => s.serialize()),
             wolf: game.wolfList.map(w => w.serialize()),
+            fires: game.fireList.map(f => f.serialize()),
             trought: game.trought ? game.trought.serialize() : null,
             tileMap: game.world && game.world.tileMap ? game.world.tileMap.serialize() : null
         };
@@ -74,6 +75,13 @@ export class SaveSystem {
                         wolf.deserialize(wData);
                         return wolf;
                     });
+                });
+            }
+
+            // Restore fires
+            if (saveData.fires && Array.isArray(saveData.fires)) {
+                import('./Fire.js').then(({ Fire }) => {
+                    game.fireList = saveData.fires.map(fData => Fire.deserialize(fData));
                 });
             }
 

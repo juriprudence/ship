@@ -4,7 +4,8 @@ import { Animal } from './Animal.js';
 const sheepImages = {
     spritesheet: new Image(),
     eatingSpritesheet: new Image(), // New 4x4 eating animation
-    die: [new Image(), new Image(), new Image(), new Image()] // 4 frames for death animation/stages
+    die: [new Image(), new Image(), new Image(), new Image()], // 4 frames for death animation/stages
+    heart: new Image() // New dead sheep sprite
 };
 
 let sheepImagesLoaded = false;
@@ -17,6 +18,7 @@ function loadSheepImages(assets) {
         sheepImages.die[1] = assets.getAsset('images', 'images/sheep/sheep_die/2.png');
         sheepImages.die[2] = assets.getAsset('images', 'images/sheep/sheep_die/3.png');
         sheepImages.die[3] = assets.getAsset('images', 'images/sheep/sheep_die/4.png');
+        sheepImages.heart = assets.getAsset('images', 'images/heart_sheep.png');
     } else {
         sheepImages.spritesheet.src = 'images/sheep/sheepw.png';
         sheepImages.eatingSpritesheet.src = 'images/sheep/sheep.png';
@@ -24,6 +26,7 @@ function loadSheepImages(assets) {
         sheepImages.die[1].src = 'images/sheep/sheep_die/2.png';
         sheepImages.die[2].src = 'images/sheep/sheep_die/3.png';
         sheepImages.die[3].src = 'images/sheep/sheep_die/4.png';
+        sheepImages.heart.src = 'images/heart_sheep.png';
     }
     sheepImagesLoaded = true;
 }
@@ -110,10 +113,18 @@ export class Sheep extends Animal {
         ctx.fill();
 
         if (this.lifeState === 'dying') {
-            const stage = Math.min(3, Math.floor(this.deathStage));
-            const img = sheepImages.die[stage];
+            const img = sheepImages.heart;
             if (img && img.complete) {
-                ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+                // Determine frame dimensions (4x4 grid)
+                const frameW = img.naturalWidth / 4;
+                const frameH = img.naturalHeight / 4;
+
+                // Draw first frame (0,0)
+                ctx.drawImage(
+                    img,
+                    0, 0, frameW, frameH,
+                    this.x - this.width / 2, this.y - this.height / 2, this.width, this.height
+                );
             }
             ctx.restore();
             return;

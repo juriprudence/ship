@@ -38,8 +38,44 @@ export class Wolf {
         this.fleeSource = { x: sourceX, y: sourceY };
     }
 
-    update(dt, sheepList, world, wolfList, player) {
+    update(dt, sheepList, world, wolfList, player, fireList) {
         if (sheepList.length === 0) return;
+
+        // Fire Avoidance
+        let nearestFire = null;
+        let distToFire = Infinity;
+        if (fireList && fireList.length > 0) {
+            fireList.forEach(f => {
+                const d = Math.hypot(this.x - f.x, this.y - f.y);
+                if (d < distToFire) {
+                    distToFire = d;
+                    nearestFire = f;
+                }
+            });
+        }
+
+        if (nearestFire && distToFire < 400) { // Repel radius
+            // Strong push away from fire
+            const angle = Math.atan2(this.y - nearestFire.y, this.x - nearestFire.x);
+            this.x += Math.cos(angle) * this.speed * 4 * dt;
+            this.y += Math.sin(angle) * this.speed * 4 * dt;
+
+            // Also force state change to flee if very close
+            if (this.state !== 'flee' && distToFire < 250) {
+                this.state = 'flee';
+                this.fleeTimer = 1.0;
+                this.fleeSource = { x: nearestFire.x, y: nearestFire.y };
+            }
+
+            // If we are being pushed, we skip the rest of the movement logic for this frame to avoid conflicts
+            // But we still want animation update.
+            this.animationTimer += dt * 5;
+            if (this.animationTimer > 1) {
+                this.animationFrame = (this.animationFrame + 1) % 2;
+                this.animationTimer = 0;
+            }
+            return null;
+        }
 
         // Pack Detection
         let nearbyWolves = 0;

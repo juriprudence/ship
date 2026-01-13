@@ -181,6 +181,22 @@ export class Wolf {
             }
         }
 
+        // Wolf Collision (Separation)
+        wolfList.forEach(w => {
+            if (w === this) return;
+            const d = Math.hypot(this.x - w.x, this.y - w.y);
+            // Wolf width is 40. Collision radius ~30.
+            const minDistance = (this.width + w.width) * 0.4;
+
+            if (d < minDistance) {
+                const pushAngle = Math.atan2(this.y - w.y, this.x - w.x);
+                // Push force
+                const pushForce = (minDistance - d) / minDistance * 5;
+                moveX += Math.cos(pushAngle) * pushForce;
+                moveY += Math.sin(pushAngle) * pushForce;
+            }
+        });
+
         // Smart Obstacle Avoidance (Steering)
         let finalMoveX = moveX;
         let finalMoveY = moveY;

@@ -70,29 +70,17 @@ export class Player {
         this.isMoving = false; // Stop moving when attacking
     }
 
-    update(dt, soundManager, world) {
+    update(dt, soundManager, world, animalList) {
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
+        let inputMoveX = 0;
+        let inputMoveY = 0;
+
         if (dist > 5) {
-            const moveX = (dx / dist) * this.speed * dt;
-            const moveY = (dy / dist) * this.speed * dt;
-
-            // Collision detection
-            const nextX = this.x + moveX;
-            const nextY = this.y + moveY;
-
-            if (world && world.tileMap && world.tileMap.isCollision(nextX, nextY)) {
-                // Try sliding (optional but good for UX) - for now just block
-                this.isMoving = false;
-                this.targetX = this.x;
-                this.targetY = this.y;
-            } else {
-                this.x = nextX;
-                this.y = nextY;
-                this.isMoving = true;
-            }
+            inputMoveX = (dx / dist);
+            inputMoveY = (dy / dist);
 
             // Determine direction
             if (Math.abs(dx) > Math.abs(dy)) {
@@ -103,6 +91,48 @@ export class Player {
         } else {
             this.isMoving = false;
         }
+
+        // Apply movement with collision checks
+        const speed = this.speed * dt;
+        let finalMoveX = inputMoveX * speed;
+        let finalMoveY = inputMoveY * speed;
+
+        // --- Animal Collision ---
+        if (animalList) {
+            animalList.forEach(animal => {
+                const d = Math.hypot(this.x - animal.x, this.y - animal.y);
+                // Player radius approx 12 (from shadows/visuals) but effectively larger for blocking
+                // Animal width is 50-100.
+                const minDistance = (20 + animal.width) * 0.4; // 20 is "player width" approx
+
+                if (d < minDistance) {
+                    // Push player away from animal
+                    const pushAngle = Math.atan2(this.y - animal.y, this.x - animal.x);
+                    const pushForce = (minDistance - d) / minDistance * 5; // Hard push
+
+                    finalMoveX += Math.cos(pushAngle) * pushForce;
+                    finalMoveY += Math.sin(pushAngle) * pushForce;
+                }
+            });
+        }
+
+        // Apply final movement
+        if (inputMoveX !== 0 || inputMoveY !== 0 || finalMoveX !== 0 || finalMoveY !== 0) {
+            const nextX = this.x + finalMoveX;
+            const nextY = this.y + finalMoveY;
+
+            // Map Collision
+            if (world && world.tileMap && world.tileMap.isCollision(nextX, nextY)) {
+                this.isMoving = false;
+                this.targetX = this.x;
+                this.targetY = this.y;
+            } else {
+                this.x = nextX;
+                this.y = nextY;
+                this.isMoving = (inputMoveX !== 0 || inputMoveY !== 0);
+            }
+        }
+
 
         // Animation logic
         this.animationTimer += dt;

@@ -869,7 +869,8 @@ export class Game {
             );
         }
 
-        this.player.update(dt, this.soundManager, this.world);
+        const allAnimals = [...this.sheepList, ...this.cowList];
+        this.player.update(dt, this.soundManager, this.world, allAnimals);
         this.trought.update(dt);
 
         // Extraction Logic
@@ -943,8 +944,9 @@ export class Game {
         // Sheep Logic
         const survivingSheep = [];
         let anyoneEatingOnScreen = false;
+        // allAnimals is already defined at top of update()
         this.sheepList.forEach(s => {
-            const event = s.update(dt, this.player, this.world, this.sheepList, this.trought);
+            const event = s.update(dt, this.player, this.world, allAnimals, this.trought);
             if (event && event.died) {
                 this.showNotification(this.t('sheepDied', { cause: this.t(event.cause) }));
                 this.soundManager.playEffect('daying_sheep');
@@ -1018,7 +1020,7 @@ export class Game {
         // Cow Logic (same as sheep logic)
         const survivingCows = [];
         this.cowList.forEach(c => {
-            const event = c.update(dt, this.player, this.world, this.cowList, this.trought);
+            const event = c.update(dt, this.player, this.world, allAnimals, this.trought);
             if (event && event.died) {
                 this.showNotification(this.t('cowDied', { cause: this.t(event.cause) }));
                 this.soundManager.playEffect('daying_cow');
@@ -1078,12 +1080,22 @@ export class Game {
         this.ctx.translate(-Math.floor(this.camera.x), -Math.floor(this.camera.y));
 
         this.world.draw(this.ctx, this.camera, this.canvas.width, this.canvas.height);
-        this.trought.draw(this.ctx);
 
-        this.sheepList.forEach(s => s.draw(this.ctx));
-        this.cowList.forEach(c => c.draw(this.ctx));
-        this.wolfList.forEach(w => w.draw(this.ctx));
-        this.player.draw(this.ctx, this.gameState.time);
+        // Z-Index Sorting (Render entities based on Y coordinate)
+        const renderList = [];
+        if (this.trought) renderList.push(this.trought);
+        renderList.push(this.player);
+        this.sheepList.forEach(s => renderList.push(s));
+        this.cowList.forEach(c => renderList.push(c));
+        this.wolfList.forEach(w => renderList.push(w));
+
+        // Sort by Y (lower Y = higher on screen = drawn first)
+        renderList.sort((a, b) => a.y - b.y);
+
+        renderList.forEach(e => {
+            if (e === this.player) e.draw(this.ctx, this.gameState.time);
+            else e.draw(this.ctx);
+        });
 
         // Ghost grass preview
         if (this.placementMode === 'grass') {

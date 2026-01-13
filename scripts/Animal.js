@@ -104,10 +104,15 @@ export class Animal {
         animalList.forEach(other => {
             if (this === other) return;
             const d = Math.hypot(this.x - other.x, this.y - other.y);
-            if (d < 20) {
+            // Dynamic collision distance based on size (approx 35% of total width)
+            const minDistance = (this.width + other.width) * 0.35;
+
+            if (d < minDistance) {
                 const pushAngle = Math.atan2(this.y - other.y, this.x - other.x);
-                moveX += Math.cos(pushAngle) * 2;
-                moveY += Math.sin(pushAngle) * 2;
+                // Push harder if too close
+                const pushForce = (minDistance - d) / minDistance * 5;
+                moveX += Math.cos(pushAngle) * pushForce;
+                moveY += Math.sin(pushAngle) * pushForce;
             }
         });
 

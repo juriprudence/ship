@@ -229,6 +229,7 @@ export class Game {
             'images/cow/milk_cow/2.png',
             'images/cow/milk_cow/3.png',
             'images/cow/milk_cow/4.png',
+            'images/cow/cow_all.png',
             'images/wolf1.png',
             'images/wolf2.png',
             'scripts/maps/spritesheet.png',

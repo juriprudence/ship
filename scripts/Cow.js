@@ -2,13 +2,7 @@ import { drawEmoji } from './Utils.js';
 import { Animal } from './Animal.js';
 
 const cowImages = {
-    down: new Image(),
-    up: new Image(),
-    left: new Image(),
-    right: new Image(),
-    anim1: new Image(),
-    anim2: new Image(),
-    anim3: new Image(),
+    spritesheet: new Image(),
     headDown1: new Image(),
     headDown2: new Image(),
     milk1: new Image(),
@@ -21,13 +15,7 @@ let cowImagesLoaded = false;
 function loadCowImages(assets) {
     if (cowImagesLoaded) return;
     if (assets) {
-        cowImages.down = assets.getAsset('images', 'images/cow/down.png');
-        cowImages.up = assets.getAsset('images', 'images/cow/up.png');
-        cowImages.right = assets.getAsset('images', 'images/cow/right.png');
-        cowImages.left = assets.getAsset('images', 'images/cow/left.png');
-        cowImages.anim1 = assets.getAsset('images', 'images/cow/cow_animation/1.png');
-        cowImages.anim2 = assets.getAsset('images', 'images/cow/cow_animation/2.png');
-        cowImages.anim3 = assets.getAsset('images', 'images/cow/cow_animation/3.png');
+        cowImages.spritesheet = assets.getAsset('images', 'images/cow/cow_all.png');
         cowImages.headDown1 = assets.getAsset('images', 'images/cow/head_down/head_down.png');
         cowImages.headDown2 = assets.getAsset('images', 'images/cow/head_down/head_downt.png');
         cowImages.milk1 = assets.getAsset('images', 'images/cow/milk_cow/1.png');
@@ -35,13 +23,7 @@ function loadCowImages(assets) {
         cowImages.milk3 = assets.getAsset('images', 'images/cow/milk_cow/3.png');
         cowImages.milk4 = assets.getAsset('images', 'images/cow/milk_cow/4.png');
     } else {
-        cowImages.down.src = 'images/cow/down.png';
-        cowImages.up.src = 'images/cow/up.png';
-        cowImages.right.src = 'images/cow/right.png';
-        cowImages.left.src = 'images/cow/left.png';
-        cowImages.anim1.src = 'images/cow/cow_animation/1.png';
-        cowImages.anim2.src = 'images/cow/cow_animation/2.png';
-        cowImages.anim3.src = 'images/cow/cow_animation/3.png';
+        cowImages.spritesheet.src = 'images/cow/cow_all.png';
         cowImages.headDown1.src = 'images/cow/head_down/head_down.png';
         cowImages.headDown2.src = 'images/cow/head_down/head_downt.png';
         cowImages.milk1.src = 'images/cow/milk_cow/1.png';
@@ -60,8 +42,8 @@ export class Cow extends Animal {
         this.milkProduction = 0; // 0 to 100
 
         // Override dimensions for cow (larger than sheep)
-        this.width = 100;
-        this.height = 100;
+        this.width = 60;
+        this.height = 60;
 
         // Auto milking state
         this.autoMilkingStage = 0; // 0: idle, 1: milking (1-2 loop), 2: finishing (3-4 once)
@@ -144,7 +126,7 @@ export class Cow extends Animal {
         }
 
         // 6. Animation
-        const getWalkSequence = () => [0, 1, 2, 1];
+        const getWalkSequence = () => [0, 1, 2, 3];
         this.updateAnimation(dt, this.isEating, getWalkSequence);
 
         return null;
@@ -170,9 +152,8 @@ export class Cow extends Animal {
         // Draw Sprite
         let img;
         let flip = false;
-        const walkSequence = [0, 1, 2, 1];
 
-        // Use animation frames when moving horizontally, otherwise use directional sprites
+        // Milking animation
         if (this.autoMilkingStage === 1) {
             // Milking animation (1-2 loop)
             const stage1Sequence = [1, 2];
@@ -192,39 +173,58 @@ export class Cow extends Animal {
             if (this.facing === 'left') {
                 flip = true;
             }
-        } else if (this.isMoving && (this.facing === 'left' || this.facing === 'right')) {
-            // Use walking animation frames for left/right movement
-            const frameIndex = walkSequence[this.animationFrame % walkSequence.length];
-            if (frameIndex === 0) img = cowImages.anim1;
-            else if (frameIndex === 1) img = cowImages.anim2;
-            else img = cowImages.anim3;
-
-            if (this.facing === 'left') {
-                flip = true;
-            }
-        } else if (this.isMoving && this.facing === 'up') {
-            // When moving up: use up.png sprite
-            img = cowImages.up;
-        } else if (this.isMoving && this.facing === 'down') {
-            // When moving down: use down.png sprite
-            img = cowImages.down;
         } else {
-            // Use directional sprites when idle
-            img = cowImages[this.facing];
-            if (this.facing === 'left') {
-                flip = true;
+            // Walking Animation using cow_all sprite sheet (1024x1024, 4x4)
+            img = cowImages.spritesheet;
+
+            if (img && img.complete && img.naturalWidth > 0) {
+                const frameW = img.naturalWidth / 4;
+                const frameH = img.naturalHeight / 4;
+
+                let row = 0;
+                // Rows: 0=Down, 1=Left, 2=Right, 3=Up
+                if (this.facing === 'down') row = 0;
+                else if (this.facing === 'left') row = 1;
+                else if (this.facing === 'right') row = 2;
+                else if (this.facing === 'up') row = 3;
+
+                // Animation frame (0-3)
+                // If not moving, stay on first frame or maybe frame 0
+                const col = this.isMoving ? (this.animationFrame % 4) : 0;
+
+                ctx.drawImage(
+                    img,
+                    col * frameW, row * frameH, frameW, frameH,
+                    this.x - this.width / 2, this.y - this.height / 2, this.width, this.height
+                );
+
+                // Return early since we drew the sprite here
+                ctx.shadowBlur = 0;
+                this.drawStatusBars(ctx);
+                ctx.restore();
+                return;
             }
         }
 
+        // Fallback for non-walking (milking/eating) or if sprite sheet not loaded
         if (img && img.complete && img.naturalWidth > 0) {
+            // Adjust drawing size for eating animation to match visual scale
+            let drawWidth = this.width;
+            let drawHeight = this.height;
+
+            if (this.isEating) {
+                drawWidth = 100;
+                drawHeight = 100;
+            }
+
             if (flip) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.scale(-1, 1);
-                ctx.drawImage(img, -this.width / 2, -this.height / 2, this.width, this.height);
+                ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
                 ctx.restore();
             } else {
-                ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+                ctx.drawImage(img, this.x - drawWidth / 2, this.y - drawHeight / 2, drawWidth, drawHeight);
             }
         } else {
             // Fallback if image not loaded yet

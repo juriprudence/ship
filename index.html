@@ -129,7 +129,8 @@
 
         #shop-menu {
             position: absolute;
-            bottom: 20px;
+            bottom: 100px;
+            /* Moved up to clear the shop button area */
             right: 20px;
             background: rgba(40, 30, 20, 0.95);
             padding: 15px;
@@ -141,7 +142,8 @@
             color: white;
             text-align: center;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            z-index: 100;
+            z-index: 5001;
+            /* Higher than shop button */
         }
 
         .header-shop-btn {
@@ -157,7 +159,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 38px;
+            /* Slightly larger for symbol only */
             cursor: pointer;
             z-index: 5000;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
@@ -165,6 +168,8 @@
             transition: transform 0.2s, background 0.2s;
             display: none;
             /* Hidden until game starts */
+            line-height: 1;
+            padding: 0;
         }
 
         .header-shop-btn:hover {
@@ -172,9 +177,7 @@
             background: #a0522d;
         }
 
-        .shop-btn-text {
-            display: none;
-        }
+
 
         .close-shop-btn {
             position: absolute;
@@ -602,8 +605,7 @@
                     id="day-display">1</span></div>
         </div>
 
-        <button class="header-shop-btn" id="open-shop-btn">🛒 <span class="shop-btn-text"
-                data-i18n="shop">المتجر</span></button>
+        <button class="header-shop-btn" id="open-shop-btn">🛒</button>
 
         <div class="notifications" id="notification-area"></div>
 
@@ -614,12 +616,12 @@
         <div id="shop-menu">
             <button class="close-shop-btn" id="close-shop-btn">×</button>
             <h2 data-i18n="shopTitle">🛒 المتجر</h2>
-            <button class="shop-btn" id="buy-sheep-btn" data-i18n="buySheep">شراء خروف (100 🪙)</button>
-            <button class="shop-btn" id="buy-cow-btn" data-i18n="buyCow">شراء بقرة (150 🪙)</button>
-            <button class="shop-btn" id="buy-grass-btn" data-i18n="buyGrass">شراء عشب (40 🪙)</button>
-            <button class="shop-btn" id="upgrade-speed-btn" data-i18n="upgradeSpeed">حذاء السرعة (100 🪙)</button>
-            <button class="shop-btn" id="buy-fire-btn" data-i18n="buyFire">شراء نار (30 🪙)</button>
-            <button class="ad-btn" id="show-ad-btn" data-i18n="showAd"><span>📺</span> شاهد إعلان (300 🪙+)</button>
+            <button class="shop-btn" id="buy-sheep-btn" data-i18n="buySheep"></button>
+            <button class="shop-btn" id="buy-cow-btn" data-i18n="buyCow"></button>
+            <button class="shop-btn" id="buy-grass-btn" data-i18n="buyGrass"></button>
+            <button class="shop-btn" id="upgrade-speed-btn" data-i18n="upgradeSpeed"></button>
+            <button class="shop-btn" id="buy-fire-btn" data-i18n="buyFire"></button>
+            <button class="ad-btn" id="show-ad-btn" data-i18n="showAd"></button>
         </div>
 
         <div id="purchase-modal">

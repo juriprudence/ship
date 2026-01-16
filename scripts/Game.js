@@ -190,9 +190,7 @@ export class Game {
             }
         });
 
-        // Special handling for elements with buttons/icons inside
-        const shopBtnText = document.querySelector('.shop-btn-text');
-        if (shopBtnText) shopBtnText.innerText = t.shop;
+
 
         // Hide language selection, show start screen (which might still be loading)
         document.getElementById('language-selection').style.display = 'none';
@@ -354,8 +352,10 @@ export class Game {
 
     toggleShop(show) {
         const shopMenu = document.getElementById('shop-menu');
+        const openShopBtn = document.getElementById('open-shop-btn');
         if (shopMenu) {
             shopMenu.style.display = show ? 'block' : 'none';
+            if (openShopBtn) openShopBtn.style.display = show ? 'none' : 'flex';
 
             // Check if ad is ready whenever shop is opened
             if (show) {
@@ -1360,6 +1360,8 @@ export class Game {
         if (buyCowBtn) buyCowBtn.disabled = this.gameState.gold < 150;
         const buyGrassBtn = document.getElementById('buy-grass-btn');
         if (buyGrassBtn) buyGrassBtn.disabled = this.gameState.gold < 40;
+        const buyFireBtn = document.getElementById('buy-fire-btn');
+        if (buyFireBtn) buyFireBtn.disabled = this.gameState.gold < 30;
         if (upgradeBtn && upgradeBtn.getAttribute('data-i18n') !== "maxSpeed") {
             upgradeBtn.disabled = this.gameState.gold < 100;
         }

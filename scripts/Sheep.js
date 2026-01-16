@@ -107,9 +107,9 @@ export class Sheep extends Animal {
         ctx.save();
         // Shadow (Rendered before sprite for natural layering)
         ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; // Darkened for better visibility
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + 7, 10, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + 10, 15, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
         if (this.lifeState === 'dying') {

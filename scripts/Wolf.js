@@ -281,6 +281,13 @@ export class Wolf {
 
     draw(ctx) {
         ctx.save();
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + 10, 12, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         const img = this.frames[this.animationFrame];
         if (!img.complete) {
             ctx.restore();

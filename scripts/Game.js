@@ -2,7 +2,7 @@ import { Player } from './Player.js';
 import { World } from './World.js';
 import { Sheep } from './Sheep.js';
 import { Cow } from './Cow.js';
-import { Particle, Ripple, DustParticle, FloatingText } from './Utils.js';
+import { Particle, Ripple, DustParticle, FloatingText, LeafParticle } from './Utils.js';
 
 
 import { Trought } from './Trought.js';
@@ -112,6 +112,8 @@ export class Game {
         this.showAd = this.showAd.bind(this);
         this.handleAdReward = this.handleAdReward.bind(this);
         this.setLanguage = this.setLanguage.bind(this);
+        this.pause = this.pause.bind(this);
+        this.resume = this.resume.bind(this);
     }
 
     init() {
@@ -122,6 +124,15 @@ export class Game {
         window.addEventListener('pointermove', this.onPointerMove);
         window.addEventListener('pointerup', this.onPointerUp);
         window.addEventListener('pointercancel', this.onPointerUp);
+
+        // Visibility Change Listener for Ad/App Switching
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.pause();
+            } else {
+                this.resume();
+            }
+        });
 
         // Bind UI buttons
         document.getElementById('buy-sheep-btn').addEventListener('click', this.buySheep);
@@ -284,8 +295,15 @@ export class Game {
                 if (inWater) {
                     this.createRippleVFX(x, y);
                 } else {
-                    for (let i = 0; i < 4; i++) {
-                        this.particles.push(new DustParticle(x, y + 10));
+                    const inGrass = this.world.tileMap && (this.world.tileMap.isPositionInLayer(x, y, 'grass') || this.world.tileMap.isPositionInLayer(x, y, 'justgrass'));
+                    if (inGrass) {
+                        for (let i = 0; i < 6; i++) {
+                            this.particles.push(new LeafParticle(x, y));
+                        }
+                    } else {
+                        for (let i = 0; i < 4; i++) {
+                            this.particles.push(new DustParticle(x, y + 10));
+                        }
                     }
                 }
             };
@@ -352,6 +370,7 @@ export class Game {
 
     showAd() {
         if (typeof Android !== 'undefined' && Android.showRewardAd) {
+            this.pause(); // Pause immediately when ad is requested
             Android.showRewardAd();
             // Optional: Hide button immediately to prevent double clicks
             const adBtn = document.getElementById('show-ad-btn');
@@ -362,6 +381,9 @@ export class Game {
     }
 
     handleAdReward() {
+        // Resume game first thing
+        this.resume();
+
         this.gameState.gold += rewardAmount;
         this.updateUI();
 
@@ -1135,7 +1157,7 @@ export class Game {
         this.ctx.save();
         this.ctx.translate(-Math.floor(this.camera.x), -Math.floor(this.camera.y));
 
-        this.world.draw(this.ctx, this.camera, this.canvas.width, this.canvas.height);
+        this.world.draw(this.ctx, this.camera, this.canvas.width, this.canvas.height, this.gameState.time, this.player);
 
         // Z-Index Sorting (Render entities based on Y coordinate)
         const renderList = [];
@@ -1374,6 +1396,24 @@ export class Game {
 
     hasSaveGame() {
         return SaveSystem.hasSave();
+    }
+
+    pause() {
+        if (!this.gameState.gameActive) return;
+        this.gameState.gameActive = false;
+        if (this.soundManager) {
+            // Optional: Mute or pause specific sounds if needed
+            // this.soundManager.stopAll(); 
+        }
+        console.log("Game Paused");
+    }
+
+    resume() {
+        if (this.gameState.gameActive) return;
+        this.gameState.gameActive = true;
+        this.gameState.lastTime = 0; // Reset time to avoid large delta
+        requestAnimationFrame(this.gameLoop);
+        console.log("Game Resumed");
     }
 }
 

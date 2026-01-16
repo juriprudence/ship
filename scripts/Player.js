@@ -59,7 +59,14 @@ export class Player {
         // 0: Back (Up), 1: Front (Down), 2: Left, 3: Right
         this.direction = 1;
 
+        this.vx = 0;
+        this.vy = 0;
+        this.acceleration = 1200;
+        this.friction = 0.85;
+
         this.onFootstep = null;
+        this.bobOffset = 0;
+        this.bobTimer = 0;
     }
 
     attack() {
@@ -92,44 +99,57 @@ export class Player {
             this.isMoving = false;
         }
 
-        // Apply movement with collision checks
-        const speed = this.speed * dt;
-        let finalMoveX = inputMoveX * speed;
-        let finalMoveY = inputMoveY * speed;
+        // Apply acceleration
+        if (this.isMoving) {
+            this.vx += inputMoveX * this.acceleration * dt;
+            this.vy += inputMoveY * this.acceleration * dt;
+        }
+
+        // Apply friction
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+
+        // Cap speed
+        const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (currentSpeed > this.speed) {
+            const ratio = this.speed / currentSpeed;
+            this.vx *= ratio;
+            this.vy *= ratio;
+        }
+
+        let finalMoveX = this.vx * dt;
+        let finalMoveY = this.vy * dt;
 
         // --- Animal Collision ---
         if (animalList) {
             animalList.forEach(animal => {
                 const d = Math.hypot(this.x - animal.x, this.y - animal.y);
-                // Player radius approx 12 (from shadows/visuals) but effectively larger for blocking
-                // Animal width is 50-100.
-                const minDistance = (20 + animal.width) * 0.4; // 20 is "player width" approx
+                const minDistance = (20 + animal.width) * 0.4;
 
                 if (d < minDistance) {
-                    // Push player away from animal
                     const pushAngle = Math.atan2(this.y - animal.y, this.x - animal.x);
-                    const pushForce = (minDistance - d) / minDistance * 5; // Hard push
-
-                    finalMoveX += Math.cos(pushAngle) * pushForce;
-                    finalMoveY += Math.sin(pushAngle) * pushForce;
+                    const pushForce = (minDistance - d) / minDistance * 10;
+                    this.vx += Math.cos(pushAngle) * pushForce * 10;
+                    this.vy += Math.sin(pushAngle) * pushForce * 10;
                 }
             });
         }
 
         // Apply final movement
-        if (inputMoveX !== 0 || inputMoveY !== 0 || finalMoveX !== 0 || finalMoveY !== 0) {
-            const nextX = this.x + finalMoveX;
-            const nextY = this.y + finalMoveY;
+        if (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1) {
+            const nextX = this.x + this.vx * dt;
+            const nextY = this.y + this.vy * dt;
 
             // Map Collision
             if (world && world.tileMap && world.tileMap.isCollision(nextX, nextY)) {
                 this.isMoving = false;
                 this.targetX = this.x;
                 this.targetY = this.y;
+                this.vx = 0;
+                this.vy = 0;
             } else {
                 this.x = nextX;
                 this.y = nextY;
-                this.isMoving = (inputMoveX !== 0 || inputMoveY !== 0);
             }
         }
 
@@ -180,6 +200,16 @@ export class Player {
             this.animationFrame = 0;
             this.animationTimer = 0;
         }
+
+        // Bobbing logic
+        if (this.isMoving) {
+            this.bobTimer += dt * 10;
+            this.bobOffset = Math.sin(this.bobTimer) * 4;
+        } else {
+            this.bobOffset *= 0.8; // Smooth settle
+            if (Math.abs(this.bobOffset) < 0.1) this.bobOffset = 0;
+            this.bobTimer = 0;
+        }
     }
 
     handleInput(clickX, clickY) {
@@ -190,9 +220,11 @@ export class Player {
 
     draw(ctx, time) {
         // Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        const shadowScale = 1 + (this.bobOffset / 20); // Scale slightly with bob
+        const shadowAlpha = 0.3 - (this.bobOffset / 100); // Fade slightly when higher
+        ctx.fillStyle = `rgba(0,0,0,${Math.max(0.1, shadowAlpha)})`;
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + 12, 10, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + 12, 10 * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Sprite Drawing
@@ -259,8 +291,9 @@ export class Player {
 
         if (currentSprite.complete) {
             ctx.save();
+            const drawY = this.y - screenHeight + yOffset + this.bobOffset;
             if (flipHorizontal) {
-                ctx.translate(this.x, this.y - screenHeight + yOffset);
+                ctx.translate(this.x, drawY);
                 ctx.scale(-1, 1);
                 ctx.drawImage(
                     currentSprite,
@@ -274,7 +307,7 @@ export class Player {
                     currentSprite,
                     col * currentFrameWidth, row * currentFrameHeight,
                     currentFrameWidth, currentFrameHeight,
-                    this.x - screenWidth / 2, this.y - screenHeight + yOffset,
+                    this.x - screenWidth / 2, drawY,
                     screenWidth, screenHeight
                 );
             }

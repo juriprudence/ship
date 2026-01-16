@@ -81,10 +81,10 @@ export class World {
         return { respawned: false };
     }
 
-    draw(ctx, camera, canvasWidth, canvasHeight) {
+    draw(ctx, camera, canvasWidth, canvasHeight, time = 0, playerPos = null) {
         // Draw TileMap if loaded
         if (this.tileMap) {
-            this.tileMap.draw(ctx, camera);
+            this.tileMap.draw(ctx, camera, time, playerPos);
         } else {
             // Fallback Grid pattern if map not loaded yet
             ctx.strokeStyle = 'rgba(180, 140, 80, 0.2)';
@@ -107,25 +107,14 @@ export class World {
         }
 
         // Draw Oasis
-        ctx.fillStyle = '#4fa4b8'; // Water blue
-        ctx.beginPath();
-        ctx.arc(this.oasis.x, this.oasis.y, this.oasis.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#c2b280';
-        ctx.lineWidth = 10;
-        ctx.stroke();
+
 
         // Palms
-        this.palms.forEach(p => {
-            drawEmoji(ctx, p.x, p.y, '🌴', 40 * p.scale);
-        });
+
 
         // Tent
-        drawEmoji(ctx, this.tent.x, this.tent.y, '⛺', 80);
 
         // Cacti
-        this.cacti.forEach(c => {
-            drawEmoji(ctx, c.x, c.y, '🌵', 30);
-        });
+
     }
 }

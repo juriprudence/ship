@@ -166,7 +166,7 @@ export class TileMap {
         return this.isPositionInLayer(worldX, worldY, 'montnghe');
     }
 
-    draw(ctx, camera) {
+    draw(ctx, camera, time = 0, playerPos = null) {
         if (!this.tilesetImage.complete || this.tilesetImage.naturalWidth === 0) return;
 
         const columns = Math.floor(this.tilesetImage.width / this.baseTileSize);
@@ -181,9 +181,13 @@ export class TileMap {
         const originalSmoothing = ctx.imageSmoothingEnabled;
         ctx.imageSmoothingEnabled = false;
 
+        const grassLayers = ['grass', 'justgrass'];
+
         for (let i = this.mapData.layers.length - 1; i >= 0; i--) {
             const layer = this.mapData.layers[i];
             if (!layer.tiles) continue;
+
+            const isGrassLayer = grassLayers.includes(layer.name);
 
             layer.tiles.forEach(tile => {
                 const id = parseInt(tile.id);
@@ -201,11 +205,51 @@ export class TileMap {
                 const srcX = (id % columns) * this.baseTileSize;
                 const srcY = Math.floor(id / columns) * this.baseTileSize;
 
-                ctx.drawImage(
-                    this.tilesetImage,
-                    srcX, srcY, this.baseTileSize, this.baseTileSize,
-                    destX, destY, scaledTileSize + 1, scaledTileSize + 1
-                );
+                if (isGrassLayer) {
+                    ctx.save();
+
+                    // Center of tile for rotation/skew logic
+                    const centerX = destX + scaledTileSize / 2;
+                    const centerY = destY + scaledTileSize; // Sway from bottom
+
+                    // Wind sway (using sin wave)
+                    const windSway = Math.sin(time * 2 + tile.x * 0.5 + tile.y * 0.3) * 0.1;
+
+                    // Player interaction
+                    let playerBending = 0;
+                    if (playerPos) {
+                        const dx = centerX - playerPos.x;
+                        const dy = centerY - playerPos.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const interactionRadius = 40;
+
+                        if (dist < interactionRadius) {
+                            // Push grass away from player
+                            const strength = (1 - dist / interactionRadius) * 0.4;
+                            playerBending = (dx > 0 ? strength : -strength);
+                        }
+                    }
+
+                    const totalSway = windSway + playerBending;
+
+                    // Apply skew transformation
+                    ctx.translate(centerX, centerY);
+                    ctx.transform(1, 0, totalSway, 1, 0, 0);
+                    ctx.translate(-centerX, -centerY);
+
+                    ctx.drawImage(
+                        this.tilesetImage,
+                        srcX, srcY, this.baseTileSize, this.baseTileSize,
+                        destX, destY, scaledTileSize + 1, scaledTileSize + 1
+                    );
+                    ctx.restore();
+                } else {
+                    ctx.drawImage(
+                        this.tilesetImage,
+                        srcX, srcY, this.baseTileSize, this.baseTileSize,
+                        destX, destY, scaledTileSize + 1, scaledTileSize + 1
+                    );
+                }
             });
         }
         ctx.imageSmoothingEnabled = originalSmoothing;

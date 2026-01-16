@@ -127,3 +127,48 @@ export class FloatingText {
         ctx.restore();
     }
 }
+
+export class LeafParticle {
+    constructor(x, y) {
+        this.x = x + (Math.random() - 0.5) * 20;
+        this.y = y + (Math.random() - 0.5) * 10;
+        this.vx = (Math.random() - 0.5) * 30;
+        this.vy = -Math.random() * 40 - 20; // Flutter up
+        this.life = 1.0 + Math.random() * 0.5;
+        this.startLife = this.life;
+        this.size = 3 + Math.random() * 3;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.vRotation = (Math.random() - 0.5) * 10;
+
+        // Green palette
+        const colors = ['#4CAF50', '#45a049', '#2d5a27', '#8bc34a'];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += 40 * dt; // Gravity
+        this.vx += Math.sin(this.life * 10) * 20 * dt; // Fluttering side to side
+        this.rotation += this.vRotation * dt;
+        this.life -= dt;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        const alpha = Math.max(0, this.life / this.startLife);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = alpha;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+
+        // Draw a simple leaf shape (elongated ellipse/diamond)
+        ctx.beginPath();
+        ctx.moveTo(-this.size, 0);
+        ctx.quadraticCurveTo(0, -this.size / 2, this.size, 0);
+        ctx.quadraticCurveTo(0, this.size / 2, -this.size, 0);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}

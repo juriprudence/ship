@@ -136,9 +136,9 @@ export class Cow extends Animal {
         ctx.save();
         // Shadow (Rendered before sprite for natural layering)
         ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillStyle = 'rgba(0,0,0,0.35)'; // Darkened for better visibility
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + 12, 18, 7, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + 15, 25, 10, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Visual indicator for milk readiness
@@ -215,6 +215,9 @@ export class Cow extends Animal {
             if (this.isEating) {
                 drawWidth = 100;
                 drawHeight = 100;
+            } else if (this.autoMilkingStage === 1 || this.autoMilkingStage === 2) {
+                drawWidth = 120;
+                drawHeight = 120;
             }
 
             if (flip) {
